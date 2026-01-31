@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReelFlow — Content Automation Platform</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            // Dark theme palette
+            background: {
+              900: '#0a0a0b',
+              800: '#131316',
+              700: '#1a1a1f',
+              600: '#23232a',
+            },
+            surface: {
+              DEFAULT: '#1a1a1f',
+              hover: '#23232a',
+              border: '#2a2a35',
+            },
+            // Light theme palette
+            light: {
+              background: '#f8fafc',
+              surface: '#ffffff',
+              border: '#e2e8f0',
+              hover: '#f1f5f9',
+              text: '#1e293b',
+              textSecondary: '#64748b',
+              textMuted: '#94a3b8',
+            },
+            primary: {
+              DEFAULT: '#14b8a6',
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              300: '#5eead4',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            },
+            accent: {
+              DEFAULT: '#f97316',
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            },
+            success: '#10b981',
+            warning: '#f59e0b',
+            error: '#ef4444',
+            info: '#3b82f6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.3s ease-in-out',
+            'slide-up': 'slideUp 0.4s ease-out',
+            'slide-in-right': 'slideInRight 0.3s ease-out',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(10px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            slideInRight: {
+              '0%': { transform: 'translateX(-10px)', opacity: '0' },
+              '100%': { transform: 'translateX(0)', opacity: '1' },
+            },
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Configuration -->
+  <script src="config.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: #0a0a0b;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    body.light {
+      background: #f8fafc;
+    }
+
+    /* Custom scrollbar - Dark */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #131316;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a35;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3a3a45;
+    }
+
+    /* Custom scrollbar - Light */
+    body.light ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    body.light ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+    }
+
+    body.light ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Smooth transitions */
+    .transition-smooth {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Subtle grid pattern - Dark */
+    .grid-pattern {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Subtle grid pattern - Light */
+    body.light .grid-pattern {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    }
+
+    /* Chart bars animation */
+    @keyframes growUp {
+      from { transform: scaleY(0); }
+      to { transform: scaleY(1); }
+    }
+
+    .chart-bar {
+      transform-origin: bottom;
+      animation: growUp 0.6s ease-out forwards;
+    }
+
+    /* Status indicator pulse */
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-active {
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-background-900 text-gray-100">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // ====== TRANSLATIONS ======
+    const translations = {
+      en: {
+        // Navigation
+        navDashboard: "Dashboard",
+        navProjects: "Projects",
+        navScheduler: "Scheduler",
+        navUploads: "Uploads",
+        navAnalytics: "Analytics",
+        navSettings: "Settings",
+
+        // Header
+        searchPlaceholder: "Search projects, videos...",
+        notifications: "Notifications",
+
+        // KPI Cards
+        kpiUploaded: "Uploaded Videos",
+        kpiScheduled: "Scheduled Posts",
+        kpiPublished: "Published Videos",
+        kpiErrors: "Errors",
+        kpiThisWeek: "This week",
+        kpiAllTime: "All time",
+
+        // Analytics
+        analyticsTitle: "Activity Overview",
+        analyticsPlatforms: "Platform Distribution",
+        last7Days: "Last 7 days",
+
+        // Recent Activity
+        recentActivity: "Recent Activity",
+        activityVideoUploaded: "Video uploaded to",
+        activityPublished: "Published to",
+        activityScheduled: "Scheduled for",
+        activityError: "Upload failed to",
+
+        // Projects
+        projectsTitle: "Projects & Channels",
+        createProject: "Create Project",
+        videos: "videos",
+        lastActive: "Last active",
+        active: "Active",
+        paused: "Paused",
+
+        // Scheduler
+        schedulerTitle: "Content Pipeline",
+        todo: "To Do",
+        inProgress: "In Progress",
+        done: "Done",
+        uploadTask: "Upload videos",
+        scheduleTask: "Schedule posts",
+        reviewTask: "Review content",
+
+        // Status
+        statusUploading: "Uploading",
+        statusScheduled: "Scheduled",
+        statusPublished: "Published",
+        statusFailed: "Failed",
+
+        // Actions
+        viewAll: "View All",
+        addNew: "Add New",
+        export: "Export",
+        quickActions: "Quick Actions",
+
+        // Time
+        justNow: "Just now",
+        minutesAgo: "{minutes}m ago",
+        hoursAgo: "{hours}h ago",
+        daysAgo: "{days}d ago",
+      },
+      ru: {
+        // Navigation
+        navDashboard: "Дашборд",
+        navProjects: "Проекты",
+        navScheduler: "Планировщик",
+        navUploads: "Загрузки",
+        navAnalytics: "Аналитика",
+        navSettings: "Настройки",
+
+        // Header
+        searchPlaceholder: "Поиск проектов, видео...",
+        notifications: "Уведомления",
+
+        // KPI Cards
+        kpiUploaded: "Загружено видео",
+        kpiScheduled: "Запланировано постов",
+        kpiPublished: "Опубликовано видео",
+        kpiErrors: "Ошибки",
+        kpiThisWeek: "За неделю",
+        kpiAllTime: "За всё время",
+
+        // Analytics
+        analyticsTitle: "Обзор активности",
+        analyticsPlatforms: "Распределение по платформам",
+        last7Days: "Последние 7 дней",
+
+        // Recent Activity
+        recentActivity: "Последняя активность",
+        activityVideoUploaded: "Видео загружено в",
+        activityPublished: "Опубликовано в",
+        activityScheduled: "Запланировано на",
+        activityError: "Загрузка не удалась в",
+
+        // Projects
+        projectsTitle: "Проекты и каналы",
+        createProject: "Создать проект",
+        videos: "видео",
+        lastActive: "Последняя активность",
+        active: "Активен",
+        paused: "Приостановлен",
+
+        // Scheduler
+        schedulerTitle: "Контент-пайплайн",
+        todo: "К выполнению",
+        inProgress: "В работе",
+        done: "Готово",
+        uploadTask: "Загрузить видео",
+        scheduleTask: "Запланировать посты",
+        reviewTask: "Проверить контент",
+
+        // Status
+        statusUploading: "Загрузка",
+        statusScheduled: "Запланировано",
+        statusPublished: "Опубликовано",
+        statusFailed: "Ошибка",
+
+        // Actions
+        viewAll: "Посмотреть все",
+        addNew: "Добавить",
+        export: "Экспорт",
+        quickActions: "Быстрые действия",
+
+        // Time
+        justNow: "Только что",
+        minutesAgo: "{minutes}м назад",
+        hoursAgo: "{hours}ч назад",
+        daysAgo: "{days}д назад",
+      },
+    };
+
+    // ====== ICONS ======
+    const Icons = {
+      Dashboard: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+      ),
+      Projects: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+      ),
+      Scheduler: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+      Uploads: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+      ),
+      Analytics: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      ),
+      Settings: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      Search: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      ),
+      Bell: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      ChevronDown: () => (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      ),
+      TrendUp: () => (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      ),
+      Sun: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ),
+      Moon: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+      Check: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ),
+      TikTok: () => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+        </svg>
+      ),
+      Instagram: () => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 01-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 017.8 2m-.2 2A3.6 3.6 0 004 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 003.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 011.25 1.25A1.25 1.25 0 0117.25 8 1.25 1.25 0 0116 6.75a1.25 1.25 0 011.25-1.25M12 7a5 5 0 015 5 5 5 0 01-5 5 5 5 0 01-5-5 5 5 0 015-5m0 2a3 3 0 00-3 3 3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3z"/>
+        </svg>
+      ),
+      YouTube: () => (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/>
+        </svg>
+      ),
+      Plus: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+    };
+
+    // ====== API CLIENT ======
+    async function apiRequest(endpoint, options = {}) {
+      const url = `${CONFIG.API_BASE}${endpoint}`;
+      const opts = {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        credentials: 'include',
+      };
+
+      const response = await fetch(url, opts);
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+
+      return data;
+    }
+
+    // ====== OAUTH HELPERS ======
+    function openPlatformAuth(platform) {
+      const config = CONFIG[platform];
+      const state = Math.random().toString(36).substring(7);
+
+      let authUrl;
+      if (platform === 'tiktok') {
+        const scopes = config.scopes.join(',');
+        authUrl = `${config.authUrl}?client_key=${config.clientKey}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&state=${state}`;
+      } else if (platform === 'youtube') {
+        const scopes = config.scopes.join(' ');
+        authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&state=${state}`;
+      }
+
+      window.open(authUrl, '_blank', 'width=600,height=700');
+    }
+
+    async function exchangePlatformCode(platform, code) {
+      return await apiRequest('/api/oauth/exchange', {
+        method: 'POST',
+        body: JSON.stringify({ platform, code, redirect_uri: CONFIG.REDIRECT_URI }),
+      });
+    }
+
+    async function uploadVideo(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return await fetch(`${API_BASE}/api/tiktok/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      }).then(r => r.json());
+    }
+
+    // ====== DUMMY DATA ======
+    const kpiData = {
+      uploaded: { value: 1247, change: 12.5, trend: 'up' },
+      scheduled: { value: 384, change: 8.2, trend: 'up' },
+      published: { value: 892, change: -2.1, trend: 'down' },
+      errors: { value: 23, change: -15.3, trend: 'up' },
+    };
+
+    const projectsData = [
+      {
+        id: 1,
+        name: "Tech Reviews Channel",
+        platforms: ['tiktok', 'youtube'],
+        videos: 234,
+        lastActive: '2h ago',
+        status: 'active',
+      },
+      {
+        id: 2,
+        name: "Lifestyle Brand",
+        platforms: ['instagram', 'tiktok'],
+        videos: 156,
+        lastActive: '5h ago',
+        status: 'active',
+      },
+      {
+        id: 3,
+        name: "Educational Content",
+        platforms: ['youtube', 'tiktok', 'instagram'],
+        videos: 412,
+        lastActive: '1d ago',
+        status: 'paused',
+      },
+      {
+        id: 4,
+        name: "Product Demos",
+        platforms: ['tiktok'],
+        videos: 89,
+        lastActive: '3d ago',
+        status: 'active',
+      },
+    ];
+
+    const activityData = [
+      { id: 1, type: 'upload', platform: 'TikTok', video: 'Review #234', time: '2m ago', status: 'success' },
+      { id: 2, type: 'publish', platform: 'Instagram', video: 'Lifestyle clip', time: '15m ago', status: 'success' },
+      { id: 3, type: 'schedule', platform: 'YouTube', video: 'Tutorial #45', time: '1h ago', status: 'success' },
+      { id: 4, type: 'error', platform: 'TikTok', video: 'Short #189', time: '2h ago', status: 'error' },
+      { id: 5, type: 'upload', platform: 'YouTube', video: 'Demo #12', time: '3h ago', status: 'success' },
+    ];
+
+    const scheduleData = {
+      todo: [
+        { id: 1, title: "Upload batch videos", project: "Tech Reviews", priority: "high" },
+        { id: 2, title: "Review scheduled content", project: "Lifestyle Brand", priority: "medium" },
+      ],
+      inProgress: [
+        { id: 3, title: "Schedule 50 posts", project: "Educational", priority: "high", progress: 65 },
+        { id: 4, title: "Batch processing", project: "Product Demos", priority: "low", progress: 30 },
+      ],
+      done: [
+        { id: 5, title: "Connect TikTok account", project: "Tech Reviews", priority: "high" },
+        { id: 6, title: "Create automation workflow", project: "Lifestyle Brand", priority: "medium" },
+      ],
+    };
+
+    const chartData = [65, 45, 78, 52, 83, 69, 91];
+
+    // ====== UI COMPONENTS ======
+    function KPICard({ title, value, change, trend, delay }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const isPositive = trend === 'up' && change > 0 || trend === 'down' && change < 0;
+
+      return (
+        <div
+          className={`border rounded-2xl p-6 transition-smooth hover:shadow-lg animate-slide-up ${
+            isDark
+              ? 'bg-surface border-surface-border hover:border-gray-700'
+              : 'bg-white border-light-border hover:border-gray-300 hover:shadow-xl'
+          }`}
+          style={{ animationDelay: `${delay}ms` }}
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{title}</div>
+            <div className={`flex items-center gap-1 text-xs font-semibold ${
+              isPositive ? 'text-success' : 'text-error'
+            }`}>
+              <Icons.TrendUp />
+              <span>{Math.abs(change)}%</span>
+            </div>
+          </div>
+          <div className={`text-3xl font-bold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{value.toLocaleString()}</div>
+          <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{t.kpiThisWeek}</div>
+        </div>
+      );
+    }
+
+    function ActivityChart({ data }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const maxValue = Math.max(...data);
+
+      return (
+        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                {translations[useTranslations().lang].analyticsTitle}
+              </div>
+              <div className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                {translations[useTranslations().lang].last7Days}
+              </div>
+            </div>
+            <button className="text-sm text-primary hover:text-primary-400 font-medium transition-smooth">
+              {useTranslations().t.viewAll}
+            </button>
+          </div>
+
+          <div className="flex items-end justify-between gap-3 h-48">
+            {data.map((value, index) => (
+              <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                <div
+                  className="w-full bg-gradient-to-t from-primary to-primary-400 rounded-t-lg chart-bar"
+                  style={{
+                    height: `${(value / maxValue) * 100}%`,
+                    animationDelay: `${index * 80}ms`
+                  }}
+                />
+                <div className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function PlatformDistribution() {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const platforms = [
+        { name: 'TikTok', percentage: 45, color: 'bg-primary' },
+        { name: 'Instagram', percentage: 30, color: 'bg-accent' },
+        { name: 'YouTube', percentage: 25, color: 'bg-info' },
+      ];
+
+      return (
+        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
+          <div className={`text-lg font-semibold mb-6 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {t.analyticsPlatforms}
+          </div>
+          <div className="space-y-4">
+            {platforms.map((platform) => (
+              <div key={platform.name}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {platform.name}
+                  </span>
+                  <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {platform.percentage}%
+                  </span>
+                </div>
+                <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-background-700' : 'bg-gray-200'}`}>
+                  <div
+                    className={`h-full ${platform.color} rounded-full transition-all duration-500`}
+                    style={{ width: `${platform.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function RecentActivity() {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+
+      const getActivityMessage = (activity) => {
+        switch (activity.type) {
+          case 'upload':
+            return `${t.activityVideoUploaded} ${activity.platform}`;
+          case 'publish':
+            return `${t.activityPublished} ${activity.platform}`;
+          case 'schedule':
+            return `${t.activityScheduled} ${activity.platform}`;
+          case 'error':
+            return `${t.activityError} ${activity.platform}`;
+          default:
+            return '';
+        }
+      };
+
+      return (
+        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              {t.recentActivity}
+            </div>
+            <button className="text-sm text-primary hover:text-primary-400 font-medium transition-smooth">
+              {t.viewAll}
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {activityData.map((activity) => (
+              <div
+                key={activity.id}
+                className={`flex items-start gap-4 p-3 rounded-xl transition-smooth ${
+                  isDark ? 'hover:bg-background-700' : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full mt-2 status-active ${
+                  activity.status === 'success' ? 'bg-success' : 'bg-error'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-medium truncate ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                    {activity.video}
+                  </div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {getActivityMessage(activity)}
+                  </div>
+                </div>
+                <div className={`text-xs font-medium ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
+                  {activity.time}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ProjectCard({ project, onClick }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+
+      const getPlatformIcon = (platform) => {
+        switch (platform) {
+          case 'tiktok': return <Icons.TikTok />;
+          case 'instagram': return <Icons.Instagram />;
+          case 'youtube': return <Icons.YouTube />;
+          default: return null;
+        }
+      };
+
+      return (
+        <div
+          onClick={onClick}
+          className={`border rounded-2xl p-5 transition-smooth hover:shadow-lg cursor-pointer group relative ${
+            isDark
+              ? 'bg-surface border-surface-border hover:border-gray-700'
+              : 'bg-white border-light-border hover:border-gray-300 hover:shadow-xl'
+          }`}
+        >
+          {/* Hover overlay hint */}
+          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+            <span className="text-primary font-semibold text-sm">Click to upload video →</span>
+          </div>
+
+          <div className="flex items-start justify-between mb-4 relative z-10">
+            <div className="flex-1 min-w-0">
+              <div
+                className={`text-base font-semibold truncate transition-colors group-hover:text-primary ${
+                  isDark ? 'text-gray-100' : 'text-gray-900'
+                }`}
+              >
+                {project.name}
+              </div>
+              <div className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                {project.videos} {t.videos}
+              </div>
+            </div>
+            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+              project.status === 'active'
+                ? 'bg-success/10 text-success'
+                : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
+            }`}>
+              {project.status === 'active' ? t.active : t.paused}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex gap-2">
+              {project.platforms.map((platform) => (
+                <div
+                  key={platform}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    isDark ? 'bg-background-700 text-gray-400' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {getPlatformIcon(platform)}
+                </div>
+              ))}
+            </div>
+            <div className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
+              {t.lastActive}: {project.lastActive}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TaskCard({ task, status, onMove }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const priorityColors = {
+        high: 'bg-error/10 text-error',
+        medium: 'bg-warning/10 text-warning',
+        low: isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600',
+      };
+
+      const columns = ['todo', 'inProgress', 'done'];
+      const currentIndex = columns.indexOf(status);
+
+      return (
+        <div
+          className={`border rounded-xl p-4 transition-smooth hover:border-gray-600 ${
+            isDark
+              ? 'bg-background-700 border-surface-border'
+              : 'bg-gray-50 border-light-border hover:border-gray-300'
+          }`}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+              {task.title}
+            </div>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColors[task.priority]}`}>
+              {task.priority}
+            </span>
+          </div>
+          <div className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{task.project}</div>
+          {task.progress !== undefined && (
+            <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-background-900' : 'bg-gray-200'}`}>
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${task.progress}%` }}
+              />
+            </div>
+          )}
+
+          {/* Move buttons */}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700/30">
+            {currentIndex > 0 && (
+              <button
+                onClick={() => onMove(columns[currentIndex - 1])}
+                className={`px-2 py-1 rounded text-xs font-medium transition-smooth ${
+                  isDark
+                    ? 'bg-background-900 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                    : 'bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300'
+                }`}
+              >
+                ← Back
+              </button>
+            )}
+            {currentIndex < columns.length - 1 && (
+              <button
+                onClick={() => onMove(columns[currentIndex + 1])}
+                className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-smooth ml-auto"
+              >
+                Next →
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function SchedulerBoard() {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+
+      return (
+        <div className="grid grid-cols-3 gap-6">
+          {[
+            { key: 'todo', title: t.todo, tasks: scheduleData.todo },
+            { key: 'inProgress', title: t.inProgress, tasks: scheduleData.inProgress },
+            { key: 'done', title: t.done, tasks: scheduleData.done },
+          ].map((column) => (
+            <div
+              key={column.key}
+              className={`border rounded-2xl p-4 ${
+                isDark
+                  ? 'bg-background-800 border-surface-border'
+                  : 'bg-gray-50 border-light-border'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {column.title}
+                </div>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                  isDark ? 'bg-background-700 text-gray-500' : 'bg-white text-gray-600 shadow-sm'
+                }`}>
+                  {column.tasks.length}
+                </div>
+              </div>
+              <div className="space-y-3">
+                {column.tasks.map((task) => (
+                  <TaskCard key={task.id} task={task} status={column.key} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ====== THEME HOOK ======
+    const ThemeContext = React.createContext();
+
+    function useTheme() {
+      const context = React.useContext(ThemeContext);
+      return context;
+    }
+
+    // ====== LAYOUT COMPONENTS ======
+    function Sidebar({ currentPage, setCurrentPage, profiles, onConnectAccount }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const [collapsed, setCollapsed] = useState(false);
+
+      const navItems = [
+        { id: 'dashboard', icon: <Icons.Dashboard />, label: t.navDashboard },
+        { id: 'projects', icon: <Icons.Projects />, label: t.navProjects },
+        { id: 'scheduler', icon: <Icons.Scheduler />, label: t.navScheduler },
+        { id: 'uploads', icon: <Icons.Uploads />, label: t.navUploads },
+        { id: 'analytics', icon: <Icons.Analytics />, label: t.navAnalytics },
+        { id: 'settings', icon: <Icons.Settings />, label: t.navSettings },
+      ];
+
+      const profileCount = Object.keys(profiles).length;
+      const primaryProfile = profiles.tiktok || profiles.youtube;
+
+      const getPlatformIcon = (platform) => {
+        switch (platform) {
+          case 'tiktok': return <Icons.TikTok />;
+          case 'youtube': return <Icons.YouTube />;
+          default: return null;
+        }
+      };
+
+      return (
+        <aside
+          className={`fixed left-0 top-0 h-full border transition-all duration-300 z-40 ${
+            collapsed ? 'w-20' : 'w-64'
+          } ${
+            isDark
+              ? 'bg-background-800 border-surface-border'
+              : 'bg-white border-light-border shadow-lg'
+          }`}
+        >
+          {/* Logo */}
+          <div className={`h-16 flex items-center justify-between px-6 border-b ${isDark ? 'border-surface-border' : 'border-light-border'}`}>
+            {!collapsed && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">RF</span>
+                </div>
+                <span className={`text-lg font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  ReelFlow
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className={`p-1.5 rounded-lg transition-smooth ${
+                isDark
+                  ? 'hover:bg-background-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Icons.ChevronDown />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="p-4 space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
+                  currentPage === item.id
+                    ? 'bg-primary text-white font-medium'
+                    : isDark
+                      ? 'text-gray-400 hover:text-gray-200 hover:bg-background-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                {item.icon}
+                {!collapsed && <span>{item.label}</span>}
+              </button>
+            ))}
+          </nav>
+
+          {/* User section */}
+          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${isDark ? 'border-surface-border' : 'border-light-border'}`}>
+            {!collapsed ? (
+              <div className="space-y-3">
+                {/* Connected profiles */}
+                {profileCount > 0 && (
+                  <div className="flex gap-1">
+                    {profiles.tiktok && (
+                      <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center" title="TikTok connected">
+                        <Icons.TikTok />
+                      </div>
+                    )}
+                    {profiles.youtube && (
+                      <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center" title="YouTube connected">
+                        <Icons.YouTube />
+                      </div>
+                    )}
+                    {profileCount < 2 && (
+                      <button
+                        onClick={onConnectAccount}
+                        className="w-8 h-8 rounded-lg border border-dashed border-gray-600 flex items-center justify-center text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-smooth"
+                        title="Connect more accounts"
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Primary profile info */}
+                {primaryProfile ? (
+                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {primaryProfile.display_name || primaryProfile.title}
+                  </div>
+                ) : (
+                  <button
+                    onClick={onConnectAccount}
+                    className="w-full px-3 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-smooth"
+                  >
+                    Connect Account
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                {profileCount > 0 ? (
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-600 flex items-center justify-center text-white">
+                    {primaryProfile?.display_name?.substring(0, 2).toUpperCase() || primaryProfile?.title?.substring(0, 2).toUpperCase() || 'JD'}
+                  </div>
+                ) : (
+                  <button
+                    onClick={onConnectAccount}
+                    className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </aside>
+      );
+    }
+
+    function Header() {
+      const { lang, setLang } = React.useContext(TranslationContext);
+      const { isDark, toggleTheme } = React.useContext(ThemeContext);
+      const t = translations[lang];
+      const [searchQuery, setSearchQuery] = useState('');
+
+      return (
+        <header
+          className={`h-16 border sticky top-0 z-30 transition-colors ${
+            isDark
+              ? 'bg-background-800/50 backdrop-blur-xl border-surface-border'
+              : 'bg-white/80 backdrop-blur-xl border-light-border shadow-sm'
+          }`}
+        >
+          <div className="h-full flex items-center justify-between px-6">
+            {/* Search */}
+            <div className="flex-1 max-w-md relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <Icons.Search />
+              </div>
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
+                  isDark
+                    ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
+                    : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+            </div>
+
+            {/* Right side */}
+            <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className={`p-2.5 rounded-xl border transition-smooth ${
+                  isDark
+                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Icons.Sun /> : <Icons.Moon />}
+              </button>
+
+              {/* Language Switcher */}
+              <button
+                onClick={() => setLang(lang === 'en' ? 'ru' : 'en')}
+                className={`px-3 py-2 rounded-xl border transition-smooth flex items-center gap-2 ${
+                  isDark
+                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-base">🌐</span>
+                <span className="text-sm font-medium">{lang === 'en' ? 'EN' : 'RU'}</span>
+              </button>
+
+              {/* Notifications */}
+              <button
+                className={`relative p-2.5 rounded-xl border transition-smooth ${
+                  isDark
+                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <Icons.Bell />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent status-active" />
+              </button>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    // ====== PAGES ======
+    function DashboardPage({ onUpload, setCurrentPage }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+
+      return (
+        <div className="space-y-6 animate-fade-in">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-4 gap-6">
+            <KPICard
+              title={t.kpiUploaded}
+              value={kpiData.uploaded.value}
+              change={kpiData.uploaded.change}
+              trend={kpiData.uploaded.trend}
+              delay={0}
+            />
+            <KPICard
+              title={t.kpiScheduled}
+              value={kpiData.scheduled.value}
+              change={kpiData.scheduled.change}
+              trend={kpiData.scheduled.trend}
+              delay={100}
+            />
+            <KPICard
+              title={t.kpiPublished}
+              value={kpiData.published.value}
+              change={kpiData.published.change}
+              trend={kpiData.published.trend}
+              delay={200}
+            />
+            <KPICard
+              title={t.kpiErrors}
+              value={kpiData.errors.value}
+              change={kpiData.errors.change}
+              trend={kpiData.errors.trend}
+              delay={300}
+            />
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-3 gap-6">
+            <div className="col-span-2">
+              <ActivityChart data={chartData} />
+            </div>
+            <div>
+              <PlatformDistribution />
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="grid grid-cols-3 gap-6">
+            <div className="col-span-2">
+              <RecentActivity />
+            </div>
+            <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
+              <div className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                {t.quickActions}
+              </div>
+              <div className="space-y-3">
+                <button onClick={onUpload} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth">
+                  <Icons.Plus />
+                  <span>{t.addNew}</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage('uploads')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
+                    isDark
+                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icons.Uploads />
+                  <span>{t.navUploads}</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage('scheduler')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
+                    isDark
+                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icons.Scheduler />
+                  <span>{t.navScheduler}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ProjectsPage({ onUpload }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const [projects, setProjects] = useState(projectsData);
+      const [showCreateModal, setShowCreateModal] = useState(false);
+      const [newProjectName, setNewProjectName] = useState('');
+      const [newProjectPlatforms, setNewProjectPlatforms] = useState(['tiktok']);
+
+      const handleCreateProject = async () => {
+        if (!newProjectName.trim()) return;
+
+        try {
+          const result = await apiRequest('/api/projects', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: newProjectName,
+              platforms: newProjectPlatforms,
+            }),
+          });
+
+          setProjects([...projects, result.project]);
+          setNewProjectName('');
+          setNewProjectPlatforms(['tiktok']);
+          setShowCreateModal(false);
+        } catch (e) {
+          console.error('Failed to create project:', e);
+        }
+      };
+
+      const togglePlatform = (platform) => {
+        if (newProjectPlatforms.includes(platform)) {
+          setNewProjectPlatforms(newProjectPlatforms.filter(p => p !== platform));
+        } else {
+          setNewProjectPlatforms([...newProjectPlatforms, platform]);
+        }
+      };
+
+      return (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t.projectsTitle}</h1>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} mt-1`}>
+                Manage your content projects and connected channels
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+            >
+              <Icons.Plus />
+              <span>{t.createProject}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onClick={() => onUpload(project.id)}
+              />
+            ))}
+          </div>
+
+          {/* Create Project Modal */}
+          {showCreateModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+              <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up`}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {t.createProject}
+                  </h2>
+                  <button onClick={() => setShowCreateModal(false)} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Project Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="My Awesome Channel"
+                      className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
+                        isDark
+                          ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
+                          : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Platforms
+                    </label>
+                    <div className="flex gap-2">
+                      {['tiktok', 'instagram', 'youtube'].map((platform) => (
+                        <button
+                          key={platform}
+                          onClick={() => togglePlatform(platform)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-smooth ${
+                            newProjectPlatforms.includes(platform)
+                              ? 'bg-primary text-white'
+                              : isDark
+                                ? 'bg-background-700 text-gray-400 hover:bg-background-600'
+                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                        >
+                          {platform}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowCreateModal(false)}
+                      className={`flex-1 px-5 py-3 rounded-xl font-medium transition-smooth ${
+                        isDark
+                          ? 'bg-background-700 text-gray-200 hover:bg-background-600'
+                          : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateProject}
+                      disabled={!newProjectName.trim()}
+                      className="flex-1 px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function SchedulerPage() {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+
+      // Local state for draggable tasks
+      const [tasks, setTasks] = useState(scheduleData);
+
+      const moveTask = (taskId, fromColumn, toColumn) => {
+        const task = tasks[fromColumn].find(t => t.id === taskId);
+        if (!task) return;
+
+        const newTasks = { ...tasks };
+        newTasks[fromColumn] = newTasks[fromColumn].filter(t => t.id !== taskId);
+        newTasks[toColumn] = [...newTasks[toColumn], { ...task, progress: undefined }];
+        setTasks(newTasks);
+      };
+
+      return (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t.schedulerTitle}</h1>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} mt-1`}>
+                Track and manage your content workflow
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const title = prompt('Enter task title:');
+                if (title) {
+                  const newTask = {
+                    id: Date.now(),
+                    title,
+                    project: 'General',
+                    priority: 'medium',
+                  };
+                  setTasks({ ...tasks, todo: [...tasks.todo, newTask] });
+                }
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+            >
+              <Icons.Plus />
+              <span>{t.addNew}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            {[
+              { key: 'todo', title: t.todo, tasks: tasks.todo },
+              { key: 'inProgress', title: t.inProgress, tasks: tasks.inProgress },
+              { key: 'done', title: t.done, tasks: tasks.done },
+            ].map((column) => (
+              <div
+                key={column.key}
+                className={`border rounded-2xl p-4 ${
+                  isDark
+                    ? 'bg-background-800 border-surface-border'
+                    : 'bg-gray-50 border-light-border'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {column.title}
+                  </div>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                    isDark ? 'bg-background-700 text-gray-500' : 'bg-white text-gray-600 shadow-sm'
+                  }`}>
+                    {column.tasks.length}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {column.tasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      status={column.key}
+                      onMove={(toColumn) => moveTask(task.id, column.key, toColumn)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ====== TRANSLATION HOOK ======
+    const TranslationContext = React.createContext();
+
+    function useTranslations() {
+      const context = React.useContext(TranslationContext);
+      return context;
+    }
+
+    // ====== MODAL COMPONENTS ======
+    function AuthModal({ isOpen, onClose, onSuccess }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const [code, setCode] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [platform, setPlatform] = useState('tiktok'); // 'tiktok' or 'youtube'
+
+      if (!isOpen) return null;
+
+      const handleAuth = () => {
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'oauth_code') {
+            setCode(event.data.code);
+            await handleExchange(event.data.code);
+          }
+        }, { once: true });
+
+        openPlatformAuth(platform);
+      };
+
+      const handleExchange = async (authCode) => {
+        setLoading(true);
+        setError('');
+        try {
+          const result = await exchangePlatformCode(platform, authCode);
+          if (result.ok) {
+            onSuccess(result.profile);
+            onClose();
+          } else {
+            setError(result.profile_error?.body || 'Auth failed');
+          }
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleManualCode = async () => {
+        if (!code.trim()) return;
+        await handleExchange(code.trim());
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                Connect Account
+              </h2>
+              <button onClick={onClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Platform selector */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPlatform('tiktok')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-smooth ${
+                    platform === 'tiktok'
+                      ? 'bg-black text-white'
+                      : isDark ? 'bg-background-700 text-gray-400 hover:bg-background-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  <Icons.TikTok />
+                  <span>TikTok</span>
+                </button>
+                <button
+                  onClick={() => setPlatform('youtube')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-smooth ${
+                    platform === 'youtube'
+                      ? 'bg-red-600 text-white'
+                      : isDark ? 'bg-background-700 text-gray-400 hover:bg-background-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  <Icons.YouTube />
+                  <span>YouTube</span>
+                </button>
+              </div>
+
+              <button
+                onClick={handleAuth}
+                disabled={loading}
+                className={`w-full flex items-center justify-center gap-3 px-5 py-3 rounded-xl text-white font-medium transition-smooth disabled:opacity-50 ${
+                  platform === 'tiktok' ? 'bg-black hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {platform === 'tiktok' ? <Icons.TikTok /> : <Icons.YouTube />}
+                <span>{loading ? 'Loading...' : `Connect with ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}`}</span>
+              </button>
+
+              <div className={`text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                or paste authorization code
+              </div>
+
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={`Paste authorization code from ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}...`}
+                className={`w-full px-4 py-3 rounded-xl text-sm resize-none transition-smooth focus:outline-none focus:border-primary ${
+                  isDark
+                    ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
+                    : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
+                }`}
+                rows={3}
+              />
+
+              <button
+                onClick={handleManualCode}
+                disabled={loading || !code.trim()}
+                className="w-full px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
+              >
+                Connect with Code
+              </button>
+
+              {error && (
+                <div className={`p-3 rounded-xl text-sm ${isDark ? 'bg-error/10 text-error' : 'bg-red-50 text-red-600'}`}>
+                  {error}
+                </div>
+              )}
+
+              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                <strong>Note:</strong> You need to set your{' '}
+                {platform === 'tiktok' ? 'TikTok Client Key' : 'Google Client ID'} in the code.
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Legacy TikTok-only modal
+    function TikTokAuthModal({ isOpen, onClose, onSuccess }) {
+      return <AuthModal isOpen={isOpen} onClose={onClose} onSuccess={onSuccess} />;
+    }
+
+    function UploadModal({ isOpen, onClose, projectId }) {
+      const { lang } = React.useContext(TranslationContext);
+      const t = translations[lang];
+      const { isDark } = React.useContext(ThemeContext);
+      const [file, setFile] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [result, setResult] = useState(null);
+
+      if (!isOpen) return null;
+
+      const handleFileChange = (e) => {
+        const selected = e.target.files?.[0];
+        if (selected && selected.type.startsWith('video/')) {
+          setFile(selected);
+          setError('');
+        } else {
+          setError('Please select a video file');
+        }
+      };
+
+      const handleUpload = async () => {
+        if (!file) return;
+
+        setLoading(true);
+        setError('');
+        try {
+          const res = await uploadVideo(file);
+          setResult(res);
+          if (res.publish_id) {
+            // Save to videos list
+            await apiRequest('/api/videos', {
+              method: 'POST',
+              body: JSON.stringify({
+                projectId,
+                videoName: file.name,
+                publishId: res.publish_id,
+                status: 'uploaded',
+              }),
+            });
+          }
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleClose = () => {
+        setFile(null);
+        setError('');
+        setResult(null);
+        onClose();
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                Upload Video
+              </h2>
+              <button onClick={handleClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {!file ? (
+                <label className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-smooth ${
+                  isDark
+                    ? 'border-surface-border hover:border-gray-600'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}>
+                  <div className="text-4xl mb-3">📹</div>
+                  <div className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Click to select video
+                  </div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                    MP4, MOV, WebM supported
+                  </div>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className={`p-4 rounded-xl ${isDark ? 'bg-background-900' : 'bg-gray-50'}`}>
+                  <div className={`text-sm font-medium truncate ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                    {file.name}
+                  </div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className={`p-3 rounded-xl text-sm ${isDark ? 'bg-error/10 text-error' : 'bg-red-50 text-red-600'}`}>
+                  {error}
+                </div>
+              )}
+
+              {result && (
+                <div className={`p-3 rounded-xl text-sm ${isDark ? 'bg-success/10 text-success' : 'bg-green-50 text-green-600'}`}>
+                  ✓ Video uploaded! Publish ID: {result.publish_id}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleClose}
+                  className={`flex-1 px-5 py-3 rounded-xl font-medium transition-smooth ${
+                    isDark
+                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
+                      : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={!file || loading}
+                  className="flex-1 px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
+                >
+                  {loading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ====== MAIN APP ======
+    function App() {
+      const [lang, setLang] = useState('en');
+      const [isDark, setIsDark] = useState(true);
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [profiles, setProfiles] = useState({}); // { tiktok: {...}, youtube: {...} }
+      const [showAuthModal, setShowAuthModal] = useState(false);
+      const [showUploadModal, setShowUploadModal] = useState(false);
+      const [selectedProjectId, setSelectedProjectId] = useState(null);
+      const [stats, setStats] = useState(kpiData);
+
+      const t = translations[lang];
+
+      // Toggle theme
+      const toggleTheme = () => {
+        setIsDark(!isDark);
+      };
+
+      // Apply theme to body
+      useEffect(() => {
+        if (isDark) {
+          document.body.classList.remove('light');
+          document.body.classList.add('dark');
+        } else {
+          document.body.classList.remove('dark');
+          document.body.classList.add('light');
+        }
+      }, [isDark]);
+
+      // Load user profiles on mount
+      useEffect(() => {
+        const loadProfiles = async () => {
+          try {
+            const data = await apiRequest('/api/me');
+            setProfiles(data.profiles || {});
+          } catch (e) {
+            console.log('Not logged in');
+          }
+        };
+        loadProfiles();
+      }, []);
+
+      // Load stats
+      useEffect(() => {
+        const loadStats = async () => {
+          try {
+            const data = await apiRequest('/api/stats');
+            setStats({
+              uploaded: { value: data.uploaded, change: 12.5, trend: 'up' },
+              scheduled: { value: data.scheduled, change: 8.2, trend: 'up' },
+              published: { value: data.published, change: -2.1, trend: 'down' },
+              errors: { value: data.errors, change: -15.3, trend: 'up' },
+            });
+          } catch (e) {
+            console.log('Stats not loaded');
+          }
+        };
+        loadStats();
+      }, []);
+
+      const handleAuthSuccess = (newProfile) => {
+        setProfiles(prev => ({
+          ...prev,
+          [newProfile.platform]: newProfile
+        }));
+      };
+
+      const handleUploadClick = (projectId) => {
+        const hasProfile = Object.keys(profiles).length > 0;
+        if (!hasProfile) {
+          setShowAuthModal(true);
+        } else {
+          setSelectedProjectId(projectId);
+          setShowUploadModal(true);
+        }
+      };
+
+      const renderPage = () => {
+        switch (currentPage) {
+          case 'dashboard':
+            return <DashboardPage onUpload={() => handleUploadClick(null)} setCurrentPage={setCurrentPage} />;
+          case 'projects':
+            return <ProjectsPage onUpload={(id) => handleUploadClick(id)} />;
+          case 'scheduler':
+            return <SchedulerPage />;
+          case 'uploads':
+            return <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📤</div>
+                <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Uploads Page
+                </div>
+                <button
+                  onClick={() => handleUploadClick(null)}
+                  className="mt-4 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                >
+                  Upload New Video
+                </button>
+              </div>
+            </div>;
+          case 'analytics':
+            return <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📊</div>
+                <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Analytics Page
+                </div>
+              </div>
+            </div>;
+          case 'settings':
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <div>
+                  <h1 className={`text-2xl font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Settings</h1>
+
+                  <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-gray-200'}`}>
+                    <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Connected Accounts
+                    </h2>
+
+                    <div className="space-y-4">
+                      {/* TikTok */}
+                      <div className={`p-4 rounded-xl ${isDark ? 'bg-background-800' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center">
+                              <Icons.TikTok />
+                            </div>
+                            <div>
+                              {profiles.tiktok ? (
+                                <>
+                                  <div className={`text-base font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                    {profiles.tiktok.display_name}
+                                  </div>
+                                  <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                    {profiles.tiktok.handle}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  Not connected
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setCurrentPage('settings');
+                              setShowAuthModal(true);
+                            }}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${
+                              profiles.tiktok
+                                ? `${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
+                                : 'bg-black text-white hover:bg-gray-800'
+                            }`}
+                          >
+                            {profiles.tiktok ? 'Reconnect' : 'Connect'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* YouTube */}
+                      <div className={`p-4 rounded-xl ${isDark ? 'bg-background-800' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center">
+                              <Icons.YouTube />
+                            </div>
+                            <div>
+                              {profiles.youtube ? (
+                                <>
+                                  <div className={`text-base font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                    {profiles.youtube.title}
+                                  </div>
+                                  <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                                    {profiles.youtube.subscriber_count?.toLocaleString()} subscribers
+                                  </div>
+                                </>
+                              ) : (
+                                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  Not connected
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setCurrentPage('settings');
+                              setShowAuthModal(true);
+                            }}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${
+                              profiles.youtube
+                                ? `${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
+                          >
+                            {profiles.youtube ? 'Reconnect' : 'Connect'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          default:
+            return (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Coming Soon
+                  </div>
+                </div>
+              </div>
+            );
+        }
+      };
+
+      return (
+        <TranslationContext.Provider value={{ lang, setLang, t, isDark }}>
+          <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+            <div className={`min-h-screen grid-pattern ${isDark ? 'dark' : 'light'}`}>
+              <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} profiles={profiles} onConnectAccount={() => setShowAuthModal(true)} />
+
+              <div className="ml-64">
+                <Header />
+
+                <main className="p-6">
+                  {renderPage()}
+                </main>
+              </div>
+
+              <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                onSuccess={handleAuthSuccess}
+              />
+
+              <UploadModal
+                isOpen={showUploadModal}
+                onClose={() => setShowUploadModal(false)}
+                projectId={selectedProjectId}
+              />
+            </div>
+          </ThemeContext.Provider>
+        </TranslationContext.Provider>
+      );
+    }
+
+    // ====== INIT ======
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ReelFlow — Multi-Platform Publisher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link id="app-favicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='black'/%3E%3C/svg%3E">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+
+    <style>
+      :root{
+        --bg:#0B0E14;
+        --surface:#111827;
+        --surface2:#0F172A;
+        --border:rgba(255,255,255,0.10);
+        --muted:rgba(255,255,255,0.60);
+        --muted2:rgba(255,255,255,0.40);
+        --text:rgba(255,255,255,0.92);
+      }
+      html,body{height:100%;}
+      body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text);}
+      .rf-surface{background:var(--surface); border:1px solid var(--border);}
+      .rf-surface2{background:var(--surface2); border:1px solid var(--border);}
+      .rf-muted{color:var(--muted);}
+      .rf-muted2{color:var(--muted2);}
+      .rf-shadow{box-shadow: 0 18px 60px rgba(0,0,0,0.55);}
+      .rf-shadow-soft{box-shadow: 0 10px 30px rgba(0,0,0,0.45);}
+      .rf-focus:focus{outline:none; box-shadow: 0 0 0 3px rgba(255,255,255,0.14);}
+      .rf-scroll::-webkit-scrollbar{height:10px;width:10px;}
+      .rf-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.10);border-radius:999px;}
+      .rf-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.03);}
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+      const { useMemo, useState, useEffect } = React;
+
+      // ====== APP CONFIG ======
+      const APP = {
+        NAME: "ReelFlow — Multi-Platform Publisher",
+        COMPANY_NAME: "sshamanello",
+        CONTACT_EMAIL: "support@sshamanello.com",
+      DOMAIN: "sshamanello.ru",
+      ENTRY: "/ReelFlow",
+      get SITE_URL() { return `https://${this.DOMAIN}${this.ENTRY}`; },
+      API: "https://reelflow-worker.sshamanello.workers.dev",
+      ASSETS_BASE: "https://sshamanello.ru/static/brand",
+      LOGO_FILE: "logo.png",
+      get LOGO_URL() { return `${this.ASSETS_BASE}/${this.LOGO_FILE}`; },
+    };
+
+      const DEFAULT_LOCALE = "en";
+      const LOCALE_STORAGE_KEY = "reelflow_locale";
+      const LOCALE_NAMES = { en: "English", ru: "Русский" };
+
+      const COPY = {
+        en: {
+          nav: {
+            searchPlaceholder: "Search assets, posts, jobs…",
+            support: "Support",
+            getStarted: "Get started",
+            open: "Open",
+            connectedBadge: "Connected",
+          },
+          home: {
+            controlPanel: "Control panel",
+            heroTitle: "Plan, preview, and publish — always with user control.",
+            heroSubtitle:
+              "A universal dashboard for short-form content. Connect accounts, manage your library, schedule in a calendar, and monitor the publishing queue with logs and retries.",
+            ctaConnected: "Open dashboard",
+            ctaDisconnected: "Connect accounts",
+            ghostPlanner: "View planner",
+            ghostLegacy: "Legacy TikTok upload",
+            badges: ["Library", "Planner", "Queue", "Multi-account", "Audit-ready"],
+            mainDashboardLabel: "Main dashboard",
+            mainDashboardSub: "Reference-style layout (mock data)",
+            queueHealthLabel: "Queue health",
+            queueHealthBadge: "24h",
+            queueHealthPlaceholder: "Demo activity chart",
+            queueRetriesLabel: "Retries enabled",
+            queueBackoff: "backoff 2m → 60m",
+            connectedPlatformsLabel: "Connected platforms",
+            manageAccounts: "Manage accounts",
+            features: [
+              { title: "Bulk operations", desc: "Edit captions/tags/time for dozens of posts in one go." },
+              { title: "Platform adapters", desc: "One post → multiple platform rules and per-account limits." },
+              { title: "Transparent logs", desc: "Statuses, retries, and human-readable error reasons." },
+            ],
+          },
+          dashboard: {
+            title: "Dashboard",
+            subtitle: "KPIs, queue health, and recent activity.",
+            rightAccounts: "Accounts",
+            rightPlan: "Plan posts",
+            kpis: { assets: "Assets", scheduled: "Scheduled", queued: "Queued", errors: "Errors" },
+            throughputTitle: "Publishing throughput",
+            throughputSub: "Mock chart placeholder",
+            sparklineLabel: "Demo activity chart",
+            throughputBadges: ["Day", "Week", "Month"],
+            successLabel: "Success rate",
+            avgTimeLabel: "Avg time",
+            retriesLabel: "Retries",
+            connectedAccountsLabel: "Connected accounts",
+            connectedSummary: "1 connected",
+            disconnectedSummary: "none",
+            disconnectButton: "Disconnect (UI)",
+            connectButton: "Connect now",
+            recentActivityLabel: "Recent activity",
+            tableHeaders: { time: "Time", action: "Action", platform: "Platform", status: "Status" },
+            recentActivity: [
+              { time: "10:42", action: "Post scheduled", platform: "TikTok", status: "ok" },
+              { time: "10:11", action: "Upload finished", platform: "TikTok", status: "ok" },
+              { time: "09:58", action: "Retry (network)", platform: "TikTok", status: "warn" },
+              { time: "09:20", action: "Account connected", platform: "TikTok", status: "info" },
+            ],
+          },
+          library: {
+            title: "Library",
+            subtitle: "Your content assets. Filter, tag, and bulk-edit metadata.",
+            filtersButton: "Filters",
+            uploadButton: "Upload",
+            searchPlaceholder: "Search by filename…",
+            statusOptions: ["All statuses", "Unused", "Scheduled", "Published"],
+            platformOptions: ["All platforms", "TikTok", "YouTube Shorts", "Instagram Reels", "Pinterest"],
+            tableHeaders: { asset: "Asset", duration: "Duration", tags: "Tags", status: "Status", actions: "Actions" },
+            actions: { edit: "Edit", schedule: "Schedule" },
+            assets: [
+              { name: "clip_001.mp4", dur: "00:17", tags: "cars, repair", status: "unused" },
+              { name: "clip_002.mp4", dur: "00:26", tags: "ai, tools", status: "scheduled" },
+              { name: "clip_003.mp4", dur: "00:12", tags: "tips", status: "published" },
+            ],
+          },
+          planner: {
+            title: "Planner",
+            subtitle: "Calendar scheduling (drag & drop).",
+            slotsButton: "Slots",
+            autofillButton: "Auto-fill",
+            calendarPlaceholder: "Calendar UI placeholder (week/month view).",
+            unscheduledTitle: "Unscheduled",
+            unscheduledSub: "Drag to a day slot (soon)",
+            editPost: "Edit",
+            schedulePost: "Schedule",
+            dayLabel: "Day",
+            postLabel: "Post: {post}",
+          },
+          queue: {
+            title: "Queue",
+            subtitle: "Jobs, retries, and error logs.",
+            pauseButton: "Pause all",
+            retryButton: "Retry failed",
+            tableHeaders: { job: "Job", platform: "Platform", account: "Account", status: "Status", actions: "Actions" },
+            actions: { log: "Log", retry: "Retry" },
+            nextInfo: "Next: wire this table to real queue API and show per-attempt details.",
+            jobs: [
+              { job: "publish#1042", platform: "TikTok", account: "@you", status: "queued" },
+              { job: "upload#1041", platform: "TikTok", account: "@you", status: "running" },
+              { job: "publish#1039", platform: "TikTok", account: "@you", status: "error" },
+            ],
+          },
+        accounts: {
+          title: "Accounts",
+          subtitle: "Connect platforms and manage authorization state.",
+          legacyButton: "Legacy upload",
+          connectButton: "Connect TikTok",
+          manageButton: "Manage",
+          disconnectButton: "Disconnect",
+          connectAction: "Connect",
+          joinWaitlist: "Join waitlist",
+          noAccountText: "No account connected yet.",
+          platforms: {
+            tiktok: {
+              name: "TikTok",
+              desc: "OAuth login for draft uploads. Publishing scope can be added later.",
+            },
+              youtube: {
+                name: "YouTube Shorts",
+                desc: "Adapter placeholder. Will support scheduling and upload.",
+              },
+              instagram: {
+                name: "Instagram Reels",
+                desc: "Adapter placeholder. Will support business accounts where possible.",
+              },
+            pinterest: {
+              name: "Pinterest",
+              desc: "Adapter placeholder. Great for automation and evergreen traffic.",
+            },
+          },
+        },
+        layout: {
+          sideNav: {
+            dashboard: "Dashboard",
+            library: "Library",
+            planner: "Planner",
+            queue: "Queue",
+            accounts: "Accounts",
+            legacy: "Legacy TikTok Upload",
+            accountsHintConnected: "1 connected",
+            accountsHintDisconnected: "0 connected",
+          },
+          helper: {
+            prefix: "Start with",
+            highlight: "Accounts",
+            middle: "then schedule in",
+            planner: "Planner",
+          },
+          description: "Universal publishing control panel",
+        },
+        exportDemo: {
+          title: "Legacy TikTok Upload",
+          subtitle: "Kept for compatibility. Universal flow lives in Library/Planner/Queue.",
+          justLoggedIn: "✓ Logged in via TikTok. You can now upload a draft.",
+          videoFile: "Video file",
+          caption: "Caption",
+          placeholder: "Write a caption... #tags",
+          visibility: { public: "Public", friends: "Friends", private: "Private" },
+          allowComments: "Allow comments",
+          uploadButton: "Upload Draft",
+          publishButton: "Publish",
+          accountsButton: "Accounts",
+          dashboardButton: "Dashboard",
+          previewTitle: "Preview",
+          previewEmpty: "Your video preview will appear here",
+            summary: {
+              caption: "Caption:",
+              visibility: "Visibility:",
+              comments: "Comments:",
+              draftId: "Draft video_id:",
+            },
+            status: {
+              selectFile: "Select a file first",
+              uploading: "Uploading…",
+              uploaded: "Uploaded ✓",
+              noDraft: "No uploaded draft",
+              publishing: "Publishing…",
+              published: "Published ✓",
+              publishFailed: "Publish returned non-ok",
+              uploadError: "Upload error:",
+              publishError: "Publish error:",
+            },
+          },
+          static: {
+            privacyTitle: "Privacy Policy",
+            privacyBody: "We collect minimal data required for authentication and publishing. For questions: {email}.",
+            termsTitle: "Terms of Service",
+            termsBody: "You are responsible for your content and platform compliance. Service is provided “as is”.",
+            supportTitle: "Support",
+            supportBody: "Contact: {email}",
+          },
+          oauth: {
+            title: "OAuth Callback",
+            authFailed: "Authorization Failed",
+            invalidState: "Invalid state. Clear session and try again.",
+            exchanging: "Exchanging code… Redirecting…",
+            noCode: "No authorization code found. Please log in again.",
+            backToHome: "Back to Home",
+          },
+        },
+        ru: {
+          nav: {
+            searchPlaceholder: "Поиск активов, постов, задач…",
+            support: "Поддержка",
+            getStarted: "Начать",
+            open: "Открыть",
+            connectedBadge: "Подключено",
+          },
+          home: {
+            controlPanel: "Панель управления",
+            heroTitle: "Планируй, просматривай и публикуй — всегда под контролем пользователя.",
+            heroSubtitle:
+              "Универсальная панель для короткого контента. Подключайте аккаунты, управляйте библиотекой, планируйте в календаре и следите за очередью публикаций с логами и повторами.",
+            ctaConnected: "Открыть панель",
+            ctaDisconnected: "Подключить аккаунты",
+            ghostPlanner: "Планировщик",
+            ghostLegacy: "Старая загрузка TikTok",
+            badges: ["Библиотека", "Планировщик", "Очередь", "Несколько аккаунтов", "Для аудита"],
+            mainDashboardLabel: "Главная панель",
+            mainDashboardSub: "Макет для справки (макет данных)",
+            queueHealthLabel: "Состояние очереди",
+            queueHealthBadge: "24 ч",
+            queueHealthPlaceholder: "Демо-график активности",
+            queueRetriesLabel: "Повторы включены",
+            queueBackoff: "задержки 2м → 60м",
+            connectedPlatformsLabel: "Подключенные платформы",
+            manageAccounts: "Управлять аккаунтами",
+            features: [
+              { title: "Массовые операции", desc: "Редактируйте подписи/теги/время для десятков постов за раз." },
+              { title: "Адаптеры платформ", desc: "Один пост → правила для разных платформ и лимиты на аккаунт." },
+              { title: "Прозрачные логи", desc: "Статусы, повторы и понятные ошибки." },
+            ],
+          },
+          dashboard: {
+            title: "Панель",
+            subtitle: "Показатели, очередь и последние события.",
+            rightAccounts: "Аккаунты",
+            rightPlan: "Планировать",
+            kpis: { assets: "Активы", scheduled: "Запланировано", queued: "В очереди", errors: "Ошибки" },
+            throughputTitle: "Пропускная способность",
+            throughputSub: "Заглушка графика",
+            sparklineLabel: "Демо-график активности",
+            throughputBadges: ["День", "Неделя", "Месяц"],
+            successLabel: "Успех",
+            avgTimeLabel: "Среднее время",
+            retriesLabel: "Повторы",
+            connectedAccountsLabel: "Подключенные аккаунты",
+            connectedSummary: "1 аккаунт",
+            disconnectedSummary: "нет",
+            disconnectButton: "Отключить (UI)",
+            connectButton: "Подключить",
+            recentActivityLabel: "Последние события",
+            tableHeaders: { time: "Время", action: "Действие", platform: "Платформа", status: "Статус" },
+            recentActivity: [
+              { time: "10:42", action: "Пост запланирован", platform: "TikTok", status: "ok" },
+              { time: "10:11", action: "Загрузка завершена", platform: "TikTok", status: "ok" },
+              { time: "09:58", action: "Повтор (сеть)", platform: "TikTok", status: "warn" },
+              { time: "09:20", action: "Аккаунт подключен", platform: "TikTok", status: "info" },
+            ],
+          },
+          library: {
+            title: "Библиотека",
+            subtitle: "Ваши медиа-файлы. Фильтруйте, тегируйте и массово редактируйте метаданные.",
+            filtersButton: "Фильтры",
+            uploadButton: "Загрузить",
+            searchPlaceholder: "Поиск по имени файла…",
+            statusOptions: ["Все статусы", "Неиспользовано", "Запланировано", "Опубликовано"],
+            platformOptions: ["Все платформы", "TikTok", "YouTube Shorts", "Instagram Reels", "Pinterest"],
+            tableHeaders: { asset: "Актив", duration: "Длительность", tags: "Теги", status: "Статус", actions: "Действия" },
+            actions: { edit: "Редактировать", schedule: "Запланировать" },
+            assets: [
+              { name: "clip_001.mp4", dur: "00:17", tags: "cars, repair", status: "unused" },
+              { name: "clip_002.mp4", dur: "00:26", tags: "ai, tools", status: "scheduled" },
+              { name: "clip_003.mp4", dur: "00:12", tags: "tips", status: "published" },
+            ],
+          },
+          planner: {
+            title: "Планировщик",
+            subtitle: "Календарное планирование (перетаскивание).",
+            slotsButton: "Слоты",
+            autofillButton: "Автозаполнение",
+            calendarPlaceholder: "Заглушка календаря (неделя/месяц).",
+            unscheduledTitle: "Не назначено",
+            unscheduledSub: "Перетащите в слот дня (скоро)",
+            editPost: "Редактировать",
+            schedulePost: "Назначить",
+            dayLabel: "День",
+            postLabel: "Пост: {post}",
+          },
+          queue: {
+            title: "Очередь",
+            subtitle: "Задания, повторы и журналы ошибок.",
+            pauseButton: "Пауза всех",
+            retryButton: "Повторить ошибки",
+            tableHeaders: { job: "Задание", platform: "Платформа", account: "Аккаунт", status: "Статус", actions: "Действия" },
+            actions: { log: "Журнал", retry: "Повторить" },
+            nextInfo: "Далее: подключите реальный API очереди и покажите детали попыток.",
+            jobs: [
+              { job: "publish#1042", platform: "TikTok", account: "@you", status: "queued" },
+              { job: "upload#1041", platform: "TikTok", account: "@you", status: "running" },
+              { job: "publish#1039", platform: "TikTok", account: "@you", status: "error" },
+            ],
+          },
+        accounts: {
+          title: "Аккаунты",
+          subtitle: "Подключайте платформы и управляйте авторизацией.",
+          legacyButton: "Устаревшая загрузка",
+          connectButton: "Подключить TikTok",
+          manageButton: "Управлять",
+          disconnectButton: "Отключить",
+          connectAction: "Подключить",
+          joinWaitlist: "В лист ожидания",
+          noAccountText: "Аккаунт не подключен.",
+          platforms: {
+            tiktok: {
+              name: "TikTok",
+              desc: "OAuth-вход для черновиков. Потом можно добавить права публикации.",
+            },
+              youtube: {
+                name: "YouTube Shorts",
+                desc: "Адаптер-заглушка. Поддержит планирование и загрузку.",
+              },
+              instagram: {
+                name: "Instagram Reels",
+                desc: "Адаптер-заглушка. Поддержит бизнес-аккаунты при возможности.",
+              },
+            pinterest: {
+              name: "Pinterest",
+              desc: "Адаптер-заглушка. Хорош для автоматизации и вечного трафика.",
+            },
+          },
+        },
+        layout: {
+          sideNav: {
+            dashboard: "Панель",
+            library: "Библиотека",
+            planner: "Планировщик",
+            queue: "Очередь",
+            accounts: "Аккаунты",
+            legacy: "Старая загрузка TikTok",
+            accountsHintConnected: "1 подключен",
+            accountsHintDisconnected: "0 подключено",
+          },
+          helper: {
+            prefix: "Начните с",
+            highlight: "Аккаунтов",
+            middle: "затем планируйте в",
+            planner: "Планировщике",
+          },
+          description: "Универсальная панель управления публикациями",
+        },
+        exportDemo: {
+          title: "Устаревшая загрузка TikTok",
+          subtitle: "Оставлена для совместимости. Универсальный поток в Библиотеке/Планировщике/Очереди.",
+          justLoggedIn: "✓ Вход через TikTok получен. Можно загрузить черновик.",
+          videoFile: "Видео файл",
+          caption: "Подпись",
+          placeholder: "Напишите подпись... #теги",
+          visibility: { public: "Публично", friends: "Друзьям", private: "Только я" },
+          allowComments: "Разрешить комментарии",
+          uploadButton: "Загрузить черновик",
+          publishButton: "Опубликовать",
+          accountsButton: "Аккаунты",
+          dashboardButton: "Панель",
+          previewTitle: "Предпросмотр",
+          previewEmpty: "Здесь появится предпросмотр видео",
+            summary: {
+              caption: "Подпись:",
+              visibility: "Видимость:",
+              comments: "Комментарии:",
+              draftId: "ID черновика:",
+            },
+            status: {
+              selectFile: "Выберите файл",
+              uploading: "Загрузка…",
+              uploaded: "Загружено ✓",
+              noDraft: "Нет загруженного черновика",
+              publishing: "Публикация…",
+              published: "Опубликовано ✓",
+              publishFailed: "Публикация вернула ошибку",
+              uploadError: "Ошибка загрузки:",
+              publishError: "Ошибка публикации:",
+            },
+          },
+          static: {
+            privacyTitle: "Политика конфиденциальности",
+            privacyBody: "Мы собираем минимальные данные, нужные для авторизации и публикации. Вопросы: {email}.",
+            termsTitle: "Пользовательское соглашение",
+            termsBody: "Вы отвечаете за контент и соответствие платформам. Сервис предоставляется “как есть”.",
+            supportTitle: "Поддержка",
+            supportBody: "Связаться: {email}",
+          },
+          oauth: {
+            title: "OAuth-перенаправление",
+            authFailed: "Не удалось авторизовать",
+            invalidState: "Неверное состояние. Очистите сессию и попробуйте снова.",
+            exchanging: "Обмен кодом… Перенаправляем…",
+            noCode: "Код авторизации не найден. Войдите снова.",
+            backToHome: "На главную",
+          },
+        },
+      };
+
+      const STATUS_LABELS = {
+        en: {
+          connected: "Connected",
+          not_connected: "Not connected",
+          soon: "Soon",
+          queued: "Queued",
+          running: "Running",
+          error: "Error",
+          unused: "Unused",
+          scheduled: "Scheduled",
+          published: "Published",
+          ok: "OK",
+          warn: "Warning",
+          info: "Info",
+        },
+        ru: {
+          connected: "Подключено",
+          not_connected: "Не подключено",
+          soon: "Скоро",
+          queued: "В очереди",
+          running: "В процессе",
+          error: "Ошибка",
+          unused: "Не использовано",
+          scheduled: "Запланировано",
+          published: "Опубликовано",
+          ok: "Успешно",
+          warn: "Предупреждение",
+          info: "Информация",
+        },
+      };
+
+      const LocaleContext = React.createContext({
+        locale: DEFAULT_LOCALE,
+        setLocale: () => {},
+      });
+
+      function useLocale() {
+        const context = React.useContext(LocaleContext);
+        if (!context) throw new Error("useLocale must be used within LocaleProvider");
+        return context;
+      }
+
+      function LocaleProvider({ children }) {
+        const [locale, setLocale] = React.useState(() => {
+          if (typeof window === "undefined") return DEFAULT_LOCALE;
+          try {
+            return sessionStorage.getItem(LOCALE_STORAGE_KEY) || DEFAULT_LOCALE;
+          } catch {
+            return DEFAULT_LOCALE;
+          }
+        });
+
+        React.useEffect(() => {
+          try {
+            sessionStorage.setItem(LOCALE_STORAGE_KEY, locale);
+          } catch {}
+        }, [locale]);
+
+        const value = React.useMemo(() => ({ locale, setLocale }), [locale]);
+        return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+      }
+
+      function useCopy(section) {
+        const { locale } = useLocale();
+        const base = COPY.en[section] || {};
+        const localized = (COPY[locale] && COPY[locale][section]) || {};
+        return { ...base, ...localized };
+      }
+
+      function useStatusLabel(key) {
+        const { locale } = useLocale();
+        return (STATUS_LABELS[locale] && STATUS_LABELS[locale][key]) || STATUS_LABELS.en[key] || key;
+      }
+
+      // ====== BRANDING ======
+      function getLogoUrlFromFilename(filename) {
+        if (!filename) return null;
+        const ok = /^[\w.\-]+$/.test(filename);
+        if (!ok) return null;
+        return `${APP.ASSETS_BASE}/${filename}`;
+      }
+
+      function applyFavicon(href) {
+        try {
+          const link = document.getElementById("app-favicon");
+          if (link && href) link.href = href;
+        } catch {}
+      }
+
+      function applyBrandingFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const file = params.get("logo");
+        if (file) {
+          const url = getLogoUrlFromFilename(file);
+          if (url) {
+            sessionStorage.setItem("brand_logo_url", url);
+            return url;
+          }
+        }
+        return null;
+      }
+
+      function currentLogoUrl() {
+        return sessionStorage.getItem("brand_logo_url") || APP.LOGO_URL;
+      }
+
+      function BrandLogo({ size = 34 }) {
+        const [src] = React.useState(currentLogoUrl());
+        const [failed, setFailed] = React.useState(false);
+
+        if (!failed && src) {
+          return (
+            <img
+              src={src}
+              alt="Logo"
+              width={size}
+              height={size}
+              className="rounded-2xl object-cover"
+              style={{ border: "1px solid rgba(255,255,255,0.10)" }}
+              onError={() => setFailed(true)}
+            />
+          );
+        }
+
+        return (
+          <div
+            className="grid place-items-center rounded-2xl font-extrabold"
+            style={{
+              width: size,
+              height: size,
+              fontSize: size * 0.42,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              color: "rgba(255,255,255,0.92)",
+            }}
+          >
+            R
+          </div>
+        );
+      }
+
+      (function initBranding() {
+        const fromQuery = applyBrandingFromQuery();
+        const logoUrl = fromQuery || currentLogoUrl();
+        applyFavicon(logoUrl);
+        document.title = APP.NAME;
+      })();
+
+      // ====== OAUTH (TikTok adapter now) ======
+      const OAUTH = {
+        CLIENT_KEY: "awz0u4dkl7733fhp",
+        SCOPES: ["user.info.basic", "video.upload"],
+        AUTH_ENDPOINT: "https://www.tiktok.com/v2/auth/authorize/",
+        redirectUri: "https://sshamanello.ru/ReelFlow",
+      };
+      Object.freeze(OAUTH);
+
+      const AUTH_EVENT = "tt_auth_updated";
+
+      // ====== ROUTER ======
+      const Router = {
+        nav(path) {
+          const fullPath = `${APP.ENTRY}${path}`;
+          window.history.pushState({}, "", fullPath);
+          window.dispatchEvent(new Event("popstate"));
+        },
+      };
+
+      function useRoute() {
+        const [path, setPath] = React.useState(() => {
+          return window.location.pathname.replace(APP.ENTRY, "") || "/";
+        });
+
+        React.useEffect(() => {
+          const handler = () => {
+            const newPath = window.location.pathname.replace(APP.ENTRY, "") || "/";
+            setPath(newPath);
+          };
+          window.addEventListener("popstate", handler);
+          return () => window.removeEventListener("popstate", handler);
+        }, []);
+
+        return path;
+      }
+
+      // ====== UTILS ======
+      const Link = ({ to, children, className = "" }) => (
+        <a
+          href={`${APP.ENTRY}${to}`}
+          className={className}
+          onClick={(e) => {
+            e.preventDefault();
+            Router.nav(to);
+          }}
+        >
+          {children}
+        </a>
+      );
+
+      function cx(...xs) {
+        return xs.filter(Boolean).join(" ");
+      }
+
+      const Container = ({ children, className = "" }) => (
+        <div className={cx("mx-auto w-full max-w-6xl px-4", className)}>{children}</div>
+      );
+
+      const Panel = ({ children, className = "" }) => (
+        <div className={cx("rf-surface2 rounded-3xl", className)}>{children}</div>
+      );
+
+      const Badge = ({ children, tone = "neutral" }) => {
+        const tones = {
+          neutral: "bg-white/5 border-white/10 text-white/80",
+          ok: "bg-green-500/10 border-green-500/20 text-green-200",
+          warn: "bg-yellow-500/10 border-yellow-500/20 text-yellow-200",
+          err: "bg-red-500/10 border-red-500/20 text-red-200",
+          info: "bg-blue-500/10 border-blue-500/20 text-blue-200",
+        };
+        return (
+          <span className={cx("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", tones[tone] || tones.neutral)}>
+            {children}
+          </span>
+        );
+      };
+
+      const GhostBtn = ({ children, onClick, className = "", disabled }) => (
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={cx(
+            "rf-focus inline-flex items-center justify-center rounded-2xl border px-4 py-2 text-sm font-semibold",
+            "border-white/10 bg-white/0 hover:bg-white/5",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            className
+          )}
+        >
+          {children}
+        </button>
+      );
+
+      const PrimaryBtn = ({ children, onClick, className = "", disabled }) => (
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={cx(
+            "rf-focus inline-flex items-center justify-center rounded-2xl border px-4 py-2 text-sm font-semibold",
+            "border-white/10 bg-white text-black hover:opacity-90",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            className
+          )}
+        >
+          {children}
+        </button>
+      );
+
+      function LocaleSwitcher() {
+        const { locale, setLocale } = useLocale();
+        const next = locale === "en" ? "ru" : "en";
+        return (
+          <GhostBtn
+            className="text-xs px-3"
+            onClick={() => setLocale(next)}
+            aria-label={`Switch to ${LOCALE_NAMES[next]}`}
+          >
+            {LOCALE_NAMES[next]}
+          </GhostBtn>
+        );
+      }
+
+      function Avatar({ src, name = "You", size = 28 }) {
+        const base = { width: size, height: size };
+        if (src) {
+          return (
+            <img
+              src={src}
+              alt={name}
+              className="rounded-full object-cover"
+              style={{ ...base, border: "1px solid rgba(255,255,255,0.12)" }}
+            />
+          );
+        }
+        const initials = (name || "U").trim().slice(0, 2).toUpperCase();
+        return (
+          <div
+            className="rounded-full grid place-items-center text-xs bg-white/5"
+            style={{ ...base, border: "1px solid rgba(255,255,255,0.12)" }}
+          >
+            {initials}
+          </div>
+        );
+      }
+
+      function isTikTokConnected() {
+        try {
+          return !!sessionStorage.getItem("tt_auth");
+        } catch {
+          return false;
+        }
+      }
+
+      // ====== AUTH STARTER ======
+      async function startOAuth() {
+        try {
+          sessionStorage.removeItem("tt_auth");
+          sessionStorage.removeItem("tt_user");
+          sessionStorage.removeItem("rf_sid_token");
+        } catch {}
+
+        sessionStorage.setItem("tt_post_login_path", window.location.pathname);
+
+        const state = crypto
+          .getRandomValues(new Uint8Array(16))
+          .reduce((s, b) => s + ("0" + b.toString(16)).slice(-2), "");
+        sessionStorage.setItem("tt_state", state);
+
+        const scopeStr = encodeURIComponent(OAUTH.SCOPES.join(" "));
+        const redirectStr = encodeURIComponent(OAUTH.redirectUri);
+
+        const authUrl =
+          `${OAUTH.AUTH_ENDPOINT}` +
+          `?client_key=${OAUTH.CLIENT_KEY}` +
+          `&response_type=code` +
+          `&scope=${scopeStr}` +
+          `&redirect_uri=${redirectStr}` +
+          `&state=${state}` +
+          `&disable_auto_auth=1`;
+
+        location.href = authUrl;
+      }
+
+      // ====== API CALLS (legacy kept) ======
+      async function apiUploadDraft({ file, caption, visibility, allowComments }) {
+        const tt = sessionStorage.getItem("tt_auth");
+        if (!tt) throw new Error("Not authorized");
+
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("caption", caption || "");
+        fd.append("visibility", visibility || "public");
+        fd.append("allow_comments", allowComments ? "1" : "0");
+
+        const r = await fetch(`${APP.API}/api/tiktok/upload`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          try {
+            const j = JSON.parse(txt);
+            throw new Error(
+              `Upload failed: ${j.error || r.status} ${j.status ? `(HTTP ${j.status})` : ""} ${
+                j.detail ? JSON.stringify(j.detail) : j.body || ""
+              }`
+            );
+          } catch {
+            throw new Error(`Upload failed (HTTP ${r.status}): ${txt}`);
+          }
+        }
+        return r.json();
+      }
+
+      async function apiPublish({ video_id }) {
+        const r = await fetch(`${APP.API}/api/tiktok/publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ video_id }),
+        });
+        if (!r.ok) throw new Error("Publish failed");
+        return r.json();
+      }
+
+      // ====== NAVBAR ======
+      function Navbar({ user }) {
+        const [q, setQ] = useState("");
+        const connected = isTikTokConnected();
+        const navCopy = useCopy("nav");
+
+        return (
+          <header
+            className="sticky top-0 z-40 w-full"
+            style={{
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              backdropFilter: "blur(10px)",
+              background: "rgba(11,14,20,0.75)",
+            }}
+          >
+            <Container className="flex h-14 items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BrandLogo size={34} />
+                <Link to="/" className="font-semibold text-white/90 hover:text-white">
+                  {APP.NAME}
+                </Link>
+                {connected && <Badge tone="ok">{navCopy.connectedBadge}</Badge>}
+              </div>
+
+              <div className="hidden sm:flex items-center w-full max-w-md">
+                <div className="relative w-full">
+                  <input
+                    className="rf-focus w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 placeholder-white/30"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder={navCopy.searchPlaceholder}
+                    aria-label="Search"
+                  />
+                  <div className="absolute right-3 top-2.5 text-xs text-white/35">⌘K</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <LocaleSwitcher />
+                {connected ? (
+                  <>
+                    <GhostBtn onClick={() => Router.nav("/app/dashboard")}>{navCopy.open}</GhostBtn>
+                    <div className="hidden sm:flex items-center gap-2">
+                      <Avatar src={user?.avatar_url} name={user?.display_name || user?.handle} size={28} />
+                      <div className="text-sm text-white/80 max-w-[140px] truncate">
+                        {user?.display_name || user?.handle || "You"}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <GhostBtn onClick={() => Router.nav("/support")}>{navCopy.support}</GhostBtn>
+                    <PrimaryBtn onClick={() => Router.nav("/app/accounts")}>{navCopy.getStarted}</PrimaryBtn>
+                  </>
+                )}
+              </div>
+            </Container>
+          </header>
+        );
+      }
+
+      // ====== APP SHELL ======
+      function SideNavItem({ to, label, hint }) {
+        const route = useRoute();
+        const active = route.startsWith(to);
+        return (
+          <Link
+            to={to}
+            className={cx(
+              "rf-focus group flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-semibold",
+              active ? "bg-white text-black" : "text-white/80 hover:bg-white/5"
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <span className={cx("inline-block h-2 w-2 rounded-full", active ? "bg-black" : "bg-white/20 group-hover:bg-white/40")} />
+              {label}
+            </span>
+            {hint ? <span className={cx("text-xs", active ? "text-black/60" : "text-white/30")}>{hint}</span> : null}
+          </Link>
+        );
+      }
+
+      function AppShell({ user, children }) {
+        const layoutCopy = useCopy("layout");
+        const sideNav = layoutCopy.sideNav;
+        const helper = layoutCopy.helper;
+        return (
+          <div className="min-h-[calc(100vh-56px)]">
+            <Container className="py-6">
+              <div className="grid gap-4 md:grid-cols-[250px_1fr]">
+                <aside className="md:sticky md:top-20 md:h-[calc(100vh-100px)]">
+                  <div className="rf-surface rf-shadow-soft rounded-3xl p-3">
+                    <div className="flex items-center gap-3 px-2 py-2">
+                      <Avatar src={user?.avatar_url} name={user?.display_name || user?.handle} size={34} />
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold truncate text-white/90">{user?.display_name || user?.handle || "Workspace"}</div>
+                        <div className="text-xs rf-muted truncate">{layoutCopy.description}</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      <SideNavItem to="/app/dashboard" label={sideNav.dashboard} />
+                      <SideNavItem to="/app/library" label={sideNav.library} />
+                      <SideNavItem to="/app/planner" label={sideNav.planner} />
+                      <SideNavItem to="/app/queue" label={sideNav.queue} />
+                      <SideNavItem
+                        to="/app/accounts"
+                        label={sideNav.accounts}
+                        hint={isTikTokConnected() ? sideNav.accountsHintConnected : sideNav.accountsHintDisconnected}
+                      />
+
+                      <div className="pt-2 mt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                        <SideNavItem to="/export-demo" label={sideNav.legacy} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-xs rf-muted">
+                    {helper.prefix} <b className="text-white/80">{helper.highlight}</b>, {helper.middle}{" "}
+                    <b className="text-white/80">{helper.planner}</b>.
+                  </div>
+                </aside>
+
+                <section className="min-w-0">{children}</section>
+              </div>
+            </Container>
+          </div>
+        );
+      }
+
+      // ====== HOME ======
+      function KPI({ label, value, tone }) {
+        const ring = tone === "err" ? "border-red-500/20 bg-red-500/10" : "border-white/10 bg-white/5";
+        return (
+          <div className={cx("rounded-2xl border p-3", ring)}>
+            <div className="text-xs rf-muted">{label}</div>
+            <div className="mt-1 text-lg font-extrabold text-white/90">{value}</div>
+          </div>
+        );
+      }
+
+      const PLATFORM_STATUS_TONES = {
+        connected: "ok",
+        not_connected: "warn",
+        soon: "neutral",
+      };
+
+      function PlatformMini({ name, statusKey }) {
+        const tone = PLATFORM_STATUS_TONES[statusKey] || "neutral";
+        const label = useStatusLabel(statusKey || "soon");
+        return (
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+            <div className="text-sm text-white/85 font-semibold">{name}</div>
+            <Badge tone={tone}>{label}</Badge>
+          </div>
+        );
+      }
+
+      function Feature({ title, desc }) {
+        return (
+          <div className="rf-surface rf-shadow-soft rounded-3xl p-5">
+            <div className="font-bold text-white/90">{title}</div>
+            <div className="mt-2 text-sm rf-muted">{desc}</div>
+          </div>
+        );
+      }
+
+      const SPARKLINE_DATASETS = {
+        day: [38, 54, 48, 68, 59, 70, 78, 71, 85],
+        week: [42, 57, 49, 63, 71, 66, 74, 69, 81, 76, 82],
+        month: [25, 33, 29, 41, 54, 48, 51, 63, 58, 67, 74, 70, 79, 84, 77, 83, 88, 76, 68, 72, 82, 79, 85, 90, 86, 80, 74],
+      };
+
+      function useAnimatedData(baseData) {
+        const [animated, setAnimated] = useState(baseData || []);
+        useEffect(() => {
+          setAnimated(baseData || []);
+          const id = setInterval(() => {
+            setAnimated((prev) => {
+              return (baseData || []).map((value, index) => {
+                const baseline = baseData?.[index] ?? value;
+                const offset = (Math.random() - 0.5) * 6;
+                return Math.max(0, Math.min(100, baseline + offset));
+              });
+            });
+          }, 1200);
+          return () => clearInterval(id);
+        }, [baseData]);
+        return animated;
+      }
+
+      function Sparkline({ data = [], width = 320, height = 140, color = "#4ade80" }) {
+        const animatedData = useAnimatedData(data);
+        const chartWidth = width;
+        const chartHeight = height;
+        const maxValue = Math.max(...animatedData, 1);
+        const step = animatedData.length > 1 ? chartWidth / (animatedData.length - 1) : chartWidth;
+        const pathPoints = animatedData.map((value, index) => {
+          const x = index * step;
+          const y = chartHeight - (value / maxValue) * chartHeight;
+          return { x, y };
+        });
+        const pathD = pathPoints
+          .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+          .join(" ");
+        const areaD =
+          pathPoints.length > 0 ? `${pathD} L${chartWidth},${chartHeight} L0,${chartHeight} Z` : "";
+        const gradientId = useMemo(() => `sparkline-gradient-${Math.random().toString(36).slice(2)}`, []);
+        return (
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full overflow-visible" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={color} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {areaD && <path d={areaD} fill={`url(#${gradientId})`} stroke="none" />}
+            {pathD && (
+              <path
+                d={pathD}
+                fill="none"
+                stroke={color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+            {pathPoints.length > 0 && (
+              <circle
+                cx={pathPoints[pathPoints.length - 1].x}
+                cy={pathPoints[pathPoints.length - 1].y}
+                r="3"
+                fill={color}
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth="2"
+              />
+            )}
+          </svg>
+        );
+      }
+
+      function SparklineCard({
+        datasets,
+        modeLabels = {},
+        title,
+        description,
+        color = "#4ade80",
+        compact = false,
+        showHeader = true,
+        className = "",
+      }) {
+        const keys = Object.keys(datasets || {});
+        const [mode, setMode] = useState(keys[0] || "day");
+        const data = datasets?.[mode] || [];
+        const buttonRow = (
+          <div className="flex gap-2">
+            {keys.map((key) => {
+              const label = modeLabels[key] || key;
+              const active = key === mode;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMode(key)}
+                  className={cx(
+                    "rf-focus rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                    active
+                      ? "bg-white text-black border-white/10"
+                      : "border-white/10 text-white/70 hover:border-white/40 hover:text-white"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        );
+        const panelPadding = compact ? "p-3" : "p-4";
+        return (
+          <Panel className={cx(panelPadding, className)}>
+            {showHeader && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  {title && <div className="text-sm font-bold text-white/90">{title}</div>}
+                  {description && <div className="text-xs rf-muted">{description}</div>}
+                </div>
+                {buttonRow}
+              </div>
+            )}
+            {!showHeader && <div className="flex justify-end mb-2">{buttonRow}</div>}
+            <div className={cx(compact ? "mt-1" : "mt-3")}>
+              <Sparkline data={data} width={compact ? 260 : 320} height={compact ? 90 : 140} color={color} />
+            </div>
+            {description && !showHeader && <div className="mt-2 text-xs rf-muted">{description}</div>}
+          </Panel>
+        );
+      }
+
+      function HomePage() {
+        const homeCopy = useCopy("home");
+        const dashCopy = useCopy("dashboard");
+        const sparklineModeLabels = {
+          day: dashCopy.throughputBadges[0],
+          week: dashCopy.throughputBadges[1],
+          month: dashCopy.throughputBadges[2],
+        };
+        const connected = isTikTokConnected();
+        return (
+          <main>
+            <Container className="py-10">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rf-surface rf-shadow rounded-3xl p-8">
+                  <div className="flex items-center gap-3">
+                    <BrandLogo size={40} />
+                    <div>
+                      <div className="text-xs rf-muted">{homeCopy.controlPanel}</div>
+                      <div className="text-lg font-bold text-white/90">ReelFlow</div>
+                    </div>
+                  </div>
+
+                  <h1 className="mt-6 text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                    {homeCopy.heroTitle}
+                  </h1>
+                  <p className="mt-4 rf-muted leading-relaxed">{homeCopy.heroSubtitle}</p>
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {connected ? (
+                      <PrimaryBtn onClick={() => Router.nav("/app/dashboard")}>{homeCopy.ctaConnected}</PrimaryBtn>
+                    ) : (
+                      <PrimaryBtn onClick={() => Router.nav("/app/accounts")}>{homeCopy.ctaDisconnected}</PrimaryBtn>
+                    )}
+                    <GhostBtn onClick={() => Router.nav("/app/planner")}>{homeCopy.ghostPlanner}</GhostBtn>
+                    <GhostBtn onClick={() => Router.nav("/export-demo")}>{homeCopy.ghostLegacy}</GhostBtn>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {homeCopy.badges.map((badge, index) => (
+                      <Badge key={index}>{badge}</Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rf-surface rf-shadow rounded-3xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-white/90">{homeCopy.mainDashboardLabel}</div>
+                      <div className="text-xs rf-muted">{homeCopy.mainDashboardSub}</div>
+                    </div>
+                    <Badge tone="info">UI</Badge>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <KPI label="Assets" value="128" />
+                    <KPI label="Scheduled" value="34" />
+                    <KPI label="Queued" value="6" />
+                    <KPI label="Errors" value="1" tone="err" />
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Panel className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-white/85">{homeCopy.queueHealthLabel}</div>
+                        <Badge>{homeCopy.queueHealthBadge}</Badge>
+                      </div>
+                    <SparklineCard
+                      datasets={SPARKLINE_DATASETS}
+                      modeLabels={sparklineModeLabels}
+                      description={homeCopy.queueHealthPlaceholder}
+                      compact
+                      showHeader={false}
+                      className="mt-3"
+                    />
+                      <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="rf-muted">{homeCopy.queueRetriesLabel}</span>
+                        <span className="text-white/80">{homeCopy.queueBackoff}</span>
+                      </div>
+                    </Panel>
+
+                    <Panel className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-white/85">{homeCopy.connectedPlatformsLabel}</div>
+                        <Badge>{connected ? "1" : "0"}/4</Badge>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <PlatformMini name="TikTok" statusKey={connected ? "connected" : "not_connected"} />
+                        <PlatformMini name="YouTube Shorts" statusKey="soon" />
+                        <PlatformMini name="Instagram Reels" statusKey="soon" />
+                        <PlatformMini name="Pinterest" statusKey="soon" />
+                      </div>
+                      <div className="mt-4">
+                        <GhostBtn onClick={() => Router.nav("/app/accounts")} className="w-full">
+                          {homeCopy.manageAccounts}
+                        </GhostBtn>
+                      </div>
+                    </Panel>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {homeCopy.features.map((feature) => (
+                  <Feature key={feature.title} title={feature.title} desc={feature.desc} />
+                ))}
+              </div>
+            </Container>
+          </main>
+        );
+      }
+
+      // ====== APP PAGES ======
+      function PageHeader({ title, subtitle, right }) {
+        return (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-extrabold text-white/90">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm rf-muted">{subtitle}</p>}
+            </div>
+            {right ? <div className="flex gap-2">{right}</div> : null}
+          </div>
+        );
+      }
+
+      const ACTIVITY_STATUS_TONE = { ok: "ok", warn: "warn", info: "info" };
+
+      function DashboardPage() {
+        const connected = isTikTokConnected();
+        const dashCopy = useCopy("dashboard");
+        return (
+          <div className="rf-surface rf-shadow rounded-3xl p-6">
+            <PageHeader
+              title={dashCopy.title}
+              subtitle={dashCopy.subtitle}
+              right={[
+                <GhostBtn key="a" onClick={() => Router.nav("/app/accounts")}>{dashCopy.rightAccounts}</GhostBtn>,
+                <PrimaryBtn key="b" onClick={() => Router.nav("/app/planner")}>{dashCopy.rightPlan}</PrimaryBtn>,
+              ]}
+            />
+
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <KPI label={dashCopy.kpis.assets} value="128" />
+              <KPI label={dashCopy.kpis.scheduled} value="34" />
+              <KPI label={dashCopy.kpis.queued} value="6" />
+              <KPI label={dashCopy.kpis.errors} value="1" tone="err" />
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <Panel className="p-4 lg:col-span-2">
+                <SparklineCard
+                  datasets={SPARKLINE_DATASETS}
+                  modeLabels={{
+                    day: dashCopy.throughputBadges[0],
+                    week: dashCopy.throughputBadges[1],
+                    month: dashCopy.throughputBadges[2],
+                  }}
+                  title={dashCopy.throughputTitle}
+                  description={dashCopy.sparklineLabel}
+                  color="#38bdf8"
+                />
+
+                <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="rf-muted">{dashCopy.successLabel}</div>
+                    <div className="mt-1 text-white/85 font-bold">98.2%</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="rf-muted">{dashCopy.avgTimeLabel}</div>
+                    <div className="mt-1 text-white/85 font-bold">1m 12s</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="rf-muted">{dashCopy.retriesLabel}</div>
+                    <div className="mt-1 text-white/85 font-bold">4</div>
+                  </div>
+                </div>
+              </Panel>
+
+              <Panel className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-white/85">{dashCopy.connectedAccountsLabel}</div>
+                  <Badge tone={connected ? "ok" : "warn"}>
+                    {connected ? dashCopy.connectedSummary : dashCopy.disconnectedSummary}
+                  </Badge>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <PlatformMini name="TikTok" statusKey={connected ? "connected" : "not_connected"} />
+                  <PlatformMini name="YouTube Shorts" statusKey="soon" />
+                  <PlatformMini name="Instagram Reels" statusKey="soon" />
+                  <PlatformMini name="Pinterest" statusKey="soon" />
+                </div>
+                <div className="mt-4">
+                  {connected ? (
+                    <GhostBtn onClick={() => alert("TODO: disconnect UI")} className="w-full">
+                      {dashCopy.disconnectButton}
+                    </GhostBtn>
+                  ) : (
+                    <PrimaryBtn onClick={() => Router.nav("/app/accounts")} className="w-full">
+                      {dashCopy.connectButton}
+                    </PrimaryBtn>
+                  )}
+                </div>
+              </Panel>
+            </div>
+
+            <div className="mt-5">
+              <div className="text-sm font-bold text-white/85">{dashCopy.recentActivityLabel}</div>
+              <div className="mt-3 rf-scroll overflow-auto rounded-3xl border border-white/10 bg-white/5">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs rf-muted">
+                      <th className="px-4 py-3">{dashCopy.tableHeaders.time}</th>
+                      <th className="px-4 py-3">{dashCopy.tableHeaders.action}</th>
+                      <th className="px-4 py-3">{dashCopy.tableHeaders.platform}</th>
+                      <th className="px-4 py-3">{dashCopy.tableHeaders.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-white/85">
+                    {dashCopy.recentActivity.map((entry, index) => (
+                      <tr key={index} className="border-t border-white/5">
+                        <td className="px-4 py-3 text-xs rf-muted">{entry.time}</td>
+                        <td className="px-4 py-3">{entry.action}</td>
+                        <td className="px-4 py-3">{entry.platform}</td>
+                        <td className="px-4 py-3">
+                          <Badge tone={ACTIVITY_STATUS_TONE[entry.status] || "neutral"}>
+                            {useStatusLabel(entry.status)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const LIBRARY_STATUS_TONE = { unused: "neutral", scheduled: "info", published: "ok" };
+
+      function LibraryPage() {
+        const libCopy = useCopy("library");
+        return (
+          <div className="rf-surface rf-shadow rounded-3xl p-6">
+            <PageHeader
+              title={libCopy.title}
+              subtitle={libCopy.subtitle}
+              right={[
+                <GhostBtn key="f" onClick={() => alert("TODO: filters")}>{libCopy.filtersButton}</GhostBtn>,
+                <PrimaryBtn key="u" onClick={() => alert("TODO: upload")}>{libCopy.uploadButton}</PrimaryBtn>,
+              ]}
+            />
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <input
+                className="rf-focus rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 placeholder-white/30"
+                placeholder={libCopy.searchPlaceholder}
+              />
+              <select className="rf-focus rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90">
+                {libCopy.statusOptions.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+              <select className="rf-focus rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90">
+                {libCopy.platformOptions.map((platform) => (
+                  <option key={platform}>{platform}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-4 rf-scroll overflow-auto rounded-3xl border border-white/10 bg-white/5">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs rf-muted">
+                    <th className="px-4 py-3">{libCopy.tableHeaders.asset}</th>
+                    <th className="px-4 py-3">{libCopy.tableHeaders.duration}</th>
+                    <th className="px-4 py-3">{libCopy.tableHeaders.tags}</th>
+                    <th className="px-4 py-3">{libCopy.tableHeaders.status}</th>
+                    <th className="px-4 py-3">{libCopy.tableHeaders.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-white/85">
+                  {libCopy.assets.map((asset, index) => (
+                    <tr key={index} className="border-t border-white/5">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-16 rounded-2xl" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.08)" }} />
+                          <div>
+                            <div className="font-semibold text-white/90">{asset.name}</div>
+                            <div className="text-xs rf-muted">1080×1920 • mp4</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-white/80">{asset.dur}</td>
+                      <td className="px-4 py-3 text-white/80">{asset.tags}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={LIBRARY_STATUS_TONE[asset.status] || "neutral"}>
+                          {useStatusLabel(asset.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <GhostBtn onClick={() => alert("TODO: edit")}>{libCopy.actions.edit}</GhostBtn>
+                          <GhostBtn onClick={() => Router.nav("/app/planner")}>{libCopy.actions.schedule}</GhostBtn>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+
+      function PlannerPage() {
+        const plannerCopy = useCopy("planner");
+        const formatPostLabel = (post) => plannerCopy.postLabel.replace("{post}", post);
+        return (
+          <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+            <div className="rf-surface rf-shadow rounded-3xl p-6">
+              <PageHeader
+                title={plannerCopy.title}
+                subtitle={plannerCopy.subtitle}
+                right={[
+                  <GhostBtn key="s" onClick={() => alert("TODO: slots")}>{plannerCopy.slotsButton}</GhostBtn>,
+                  <PrimaryBtn key="a" onClick={() => alert("TODO: auto-fill")}>{plannerCopy.autofillButton}</PrimaryBtn>,
+                ]}
+              />
+
+              <div className="mt-5 rounded-3xl" style={{ border: "1px dashed rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.04)" }}>
+                <div className="p-6 text-sm rf-muted">{plannerCopy.calendarPlaceholder}</div>
+                <div className="grid grid-cols-7 gap-3 px-6 pb-6">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="rounded-3xl border border-white/10 bg-white/5 p-3 min-h-[120px]">
+                      <div className="text-xs rf-muted">
+                        {plannerCopy.dayLabel} {i + 1}
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        {i === 2 && (
+                          <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-xs">
+                            {formatPostLabel("clip_002")}
+                          </div>
+                        )}
+                        {i === 4 && (
+                          <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-xs">
+                            {formatPostLabel("clip_001")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rf-surface rf-shadow rounded-3xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-extrabold text-white/90">{plannerCopy.unscheduledTitle}</div>
+                  <div className="text-xs rf-muted">{plannerCopy.unscheduledSub}</div>
+                </div>
+                <Badge>3</Badge>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {[
+                  { t: "clip_004.mp4", d: "00:19", tag: "ai" },
+                  { t: "clip_005.mp4", d: "00:14", tag: "cars" },
+                  { t: "clip_006.mp4", d: "00:23", tag: "tutorial" },
+                ].map((p, i) => (
+                  <div key={i} className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-white/90">{p.t}</div>
+                      <Badge>{p.d}</Badge>
+                    </div>
+                    <div className="mt-2 text-xs rf-muted">Tag: {p.tag}</div>
+                    <div className="mt-3 flex gap-2">
+                      <GhostBtn onClick={() => alert("TODO: edit post")}>{plannerCopy.editPost}</GhostBtn>
+                      <PrimaryBtn onClick={() => alert("TODO: schedule")}>{plannerCopy.schedulePost}</PrimaryBtn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const QUEUE_STATUS_TONE = { queued: "neutral", running: "info", error: "err" };
+
+      function QueuePage() {
+        const queueCopy = useCopy("queue");
+        return (
+          <div className="rf-surface rf-shadow rounded-3xl p-6">
+            <PageHeader
+              title={queueCopy.title}
+              subtitle={queueCopy.subtitle}
+              right={[
+                <GhostBtn key="p" onClick={() => alert("TODO: pause")}>{queueCopy.pauseButton}</GhostBtn>,
+                <PrimaryBtn key="r" onClick={() => alert("TODO: retry")}>{queueCopy.retryButton}</PrimaryBtn>,
+              ]}
+            />
+
+            <div className="mt-4 rf-scroll overflow-auto rounded-3xl border border-white/10 bg-white/5">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs rf-muted">
+                    <th className="px-4 py-3">{queueCopy.tableHeaders.job}</th>
+                    <th className="px-4 py-3">{queueCopy.tableHeaders.platform}</th>
+                    <th className="px-4 py-3">{queueCopy.tableHeaders.account}</th>
+                    <th className="px-4 py-3">{queueCopy.tableHeaders.status}</th>
+                    <th className="px-4 py-3">{queueCopy.tableHeaders.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-white/85">
+                  {queueCopy.jobs.map((job, index) => (
+                    <tr key={index} className="border-t border-white/5">
+                      <td className="px-4 py-3 font-semibold text-white/90">{job.job}</td>
+                      <td className="px-4 py-3">{job.platform}</td>
+                      <td className="px-4 py-3">{job.account}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={QUEUE_STATUS_TONE[job.status] || "neutral"}>
+                          {useStatusLabel(job.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <GhostBtn onClick={() => alert("TODO: open log")}>{queueCopy.actions.log}</GhostBtn>
+                          <GhostBtn onClick={() => alert("TODO: retry")}>{queueCopy.actions.retry}</GhostBtn>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 text-xs rf-muted">{queueCopy.nextInfo}</div>
+          </div>
+        );
+      }
+
+      function PlatformTile({ name, desc, badge, actions, footer }) {
+        return (
+          <Panel className="p-5 rf-shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-extrabold text-white/90">{name}</div>
+                <div className="mt-1 text-sm rf-muted">{desc}</div>
+              </div>
+              <div className="shrink-0">{badge}</div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">{actions}</div>
+            {footer ? <div className="mt-4">{footer}</div> : null}
+          </Panel>
+        );
+      }
+
+      function AccountsPage({ user }) {
+        const connected = isTikTokConnected();
+        const accountsCopy = useCopy("accounts");
+        return (
+          <div className="rf-surface rf-shadow rounded-3xl p-6">
+            <PageHeader
+              title={accountsCopy.title}
+              subtitle={accountsCopy.subtitle}
+              right={[
+                <GhostBtn key="l" onClick={() => Router.nav("/export-demo")}>{accountsCopy.legacyButton}</GhostBtn>,
+                <PrimaryBtn key="t" onClick={startOAuth}>{accountsCopy.connectButton}</PrimaryBtn>,
+              ]}
+            />
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <PlatformTile
+                name={accountsCopy.platforms.tiktok.name}
+                desc={accountsCopy.platforms.tiktok.desc}
+                badge={
+                  connected ? (
+                    <Badge tone="ok">{useStatusLabel("connected")}</Badge>
+                  ) : (
+                    <Badge tone="warn">{useStatusLabel("not_connected")}</Badge>
+                  )
+                }
+                actions={
+                  connected
+                    ? [
+                        <GhostBtn key="m" onClick={() => alert("TODO: manage")}>{accountsCopy.manageButton}</GhostBtn>,
+                        <GhostBtn key="d" onClick={() => alert("TODO: disconnect")}>{accountsCopy.disconnectButton}</GhostBtn>,
+                      ]
+                    : [<PrimaryBtn key="c" onClick={startOAuth}>{accountsCopy.connectAction}</PrimaryBtn>]
+                }
+                footer={
+                  connected ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar src={user?.avatar_url} name={user?.display_name || user?.handle} size={26} />
+                      <div className="text-xs rf-muted">{user?.display_name || user?.handle || "@you"}</div>
+                    </div>
+                  ) : (
+                    <div className="text-xs rf-muted">{accountsCopy.noAccountText}</div>
+                  )
+                }
+              />
+
+              <PlatformTile
+                name={accountsCopy.platforms.youtube.name}
+                desc={accountsCopy.platforms.youtube.desc}
+                badge={<Badge>{useStatusLabel("soon")}</Badge>}
+                actions={[<GhostBtn key="w" onClick={() => alert("TODO: waitlist")}>{accountsCopy.joinWaitlist}</GhostBtn>]}
+              />
+
+              <PlatformTile
+                name={accountsCopy.platforms.instagram.name}
+                desc={accountsCopy.platforms.instagram.desc}
+                badge={<Badge>{useStatusLabel("soon")}</Badge>}
+                actions={[<GhostBtn key="w" onClick={() => alert("TODO: waitlist")}>{accountsCopy.joinWaitlist}</GhostBtn>]}
+              />
+
+              <PlatformTile
+                name={accountsCopy.platforms.pinterest.name}
+                desc={accountsCopy.platforms.pinterest.desc}
+                badge={<Badge>{useStatusLabel("soon")}</Badge>}
+                actions={[<GhostBtn key="w" onClick={() => alert("TODO: waitlist")}>{accountsCopy.joinWaitlist}</GhostBtn>]}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      // ====== LEGACY PAGE (TikTok) ======
+      function ExportDemoPage() {
+        const exportCopy = useCopy("exportDemo");
+        const [caption, setCaption] = useState("");
+        const [visibility, setVisibility] = useState("public");
+        const [allowComments, setAllowComments] = useState(true);
+        const [selectedFile, setSelectedFile] = useState(null);
+        const [user, setUser] = useState(null);
+        const [justLoggedIn, setJustLoggedIn] = useState(false);
+        const [status, setStatus] = useState("");
+        const [lastVideoId, setLastVideoId] = useState(null);
+
+        useEffect(() => {
+          try {
+            const cached = sessionStorage.getItem("tt_user");
+            if (cached) setUser(JSON.parse(cached));
+          } catch {}
+          try {
+            const tt = sessionStorage.getItem("tt_auth");
+            if (tt) {
+              const { ts } = JSON.parse(tt);
+              if (Date.now() - ts < 60_000) setJustLoggedIn(true);
+            }
+          } catch {}
+        }, []);
+
+        const onUpload = async () => {
+          const statuses = exportCopy.status;
+          if (!selectedFile) {
+            setStatus(statuses.selectFile);
+            return;
+          }
+          try {
+            setStatus(statuses.uploading);
+            const data = await apiUploadDraft({ file: selectedFile, caption, visibility, allowComments });
+            setLastVideoId(data.video_id || null);
+            setStatus(statuses.uploaded);
+          } catch (e) {
+            setStatus(`${statuses.uploadError} ${e.message}`);
+          }
+        };
+
+        const onPublish = async () => {
+          const statuses = exportCopy.status;
+          if (!lastVideoId) {
+            setStatus(statuses.noDraft);
+            return;
+          }
+          try {
+            setStatus(statuses.publishing);
+            const data = await apiPublish({ video_id: lastVideoId });
+            setStatus(data?.status === "ok" ? statuses.published : statuses.publishFailed);
+          } catch (e) {
+            setStatus(`${statuses.publishError} ${e.message}`);
+          }
+        };
+
+        return (
+          <div className="rf-surface rf-shadow rounded-3xl p-6">
+            <PageHeader
+              title={exportCopy.title}
+              subtitle={exportCopy.subtitle}
+              right={[
+               <GhostBtn key="b" onClick={() => Router.nav("/app/accounts")}>{exportCopy.accountsButton}</GhostBtn>,
+                <PrimaryBtn key="a" onClick={() => Router.nav("/app/dashboard")}>{exportCopy.dashboardButton}</PrimaryBtn>,
+              ]}
+            />
+
+            {justLoggedIn && (
+              <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-200">
+                {exportCopy.justLoggedIn}
+              </div>
+            )}
+            {status && (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-white/80">
+                {status}
+              </div>
+            )}
+
+            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+              <Panel className="p-5">
+                <div className="flex items-center gap-3">
+                  <Avatar src={user?.avatar_url} name={user?.display_name || user?.handle} size={40} />
+                  <div>
+                    <div className="font-semibold text-white/90">{user?.handle || "@your_handle"}</div>
+                    <div className="text-xs rf-muted">{user?.display_name || "Creator"}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-white/85">Video file</label>
+                  <input type="file" accept="video/*" className="mt-2 w-full text-sm" onChange={(e)=>setSelectedFile(e.target.files?.[0]||null)} />
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-white/85">{exportCopy.caption}</label>
+                  <input
+                    className="rf-focus mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 placeholder-white/30"
+                    placeholder={exportCopy.placeholder}
+                    value={caption}
+                    onChange={e=>setCaption(e.target.value)}
+                  />
+                </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 text-sm text-white/80">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="vis" checked={visibility==='public'} onChange={()=>setVisibility('public')} /> {exportCopy.visibility.public}
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="vis" checked={visibility==='friends'} onChange={()=>setVisibility('friends')} /> {exportCopy.visibility.friends}
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="vis" checked={visibility==='private'} onChange={()=>setVisibility('private')} /> {exportCopy.visibility.private}
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={allowComments} onChange={()=>setAllowComments(!allowComments)} /> {exportCopy.allowComments}
+                    </label>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <PrimaryBtn onClick={onUpload}>{exportCopy.uploadButton}</PrimaryBtn>
+                    <GhostBtn onClick={onPublish}>{exportCopy.publishButton}</GhostBtn>
+                  </div>
+                </Panel>
+
+                <Panel className="p-5">
+                <div className="text-sm font-semibold text-white/85">{exportCopy.previewTitle}</div>
+                <div className="mt-3 aspect-video w-full rounded-2xl border border-white/10 bg-white/5 grid place-items-center text-xs rf-muted">
+                  {selectedFile ? selectedFile.name : exportCopy.previewEmpty}
+                </div>
+                <ul className="mt-4 text-sm text-white/80 space-y-1">
+                  <li>
+                    <b className="text-white/90">{exportCopy.summary.caption}</b> {caption || "(empty)"}
+                  </li>
+                  <li>
+                    <b className="text-white/90">{exportCopy.summary.visibility}</b> {visibility}
+                  </li>
+                  <li>
+                    <b className="text-white/90">{exportCopy.summary.comments}</b> {allowComments ? "allowed" : "disabled"}
+                  </li>
+                  <li>
+                    <b className="text-white/90">{exportCopy.summary.draftId}</b> {lastVideoId || "(none)"}
+                  </li>
+                </ul>
+              </Panel>
+            </div>
+          </div>
+        );
+      }
+
+      // ====== STATIC PAGES ======
+      function StaticPage({ title, children }) {
+        return (
+          <Container className="py-10">
+            <div className="rf-surface rf-shadow rounded-3xl p-8">
+              <h1 className="text-2xl font-extrabold text-white/90">{title}</h1>
+              <div className="mt-4 text-sm rf-muted leading-relaxed">{children}</div>
+            </div>
+          </Container>
+        );
+      }
+
+      function PrivacyPage() {
+        const staticCopy = useCopy("static");
+        const [privacyBefore = "", privacyAfter = ""] = staticCopy.privacyBody.split("{email}");
+        return (
+          <StaticPage title={staticCopy.privacyTitle}>
+            {privacyBefore}
+            <a className="underline text-white/90" href={`mailto:${APP.CONTACT_EMAIL}`}>{APP.CONTACT_EMAIL}</a>
+            {privacyAfter}
+          </StaticPage>
+        );
+      }
+
+      function TermsPage() {
+        const staticCopy = useCopy("static");
+        return (
+          <StaticPage title={staticCopy.termsTitle}>
+            {staticCopy.termsBody}
+          </StaticPage>
+        );
+      }
+
+      function SupportPage() {
+        const staticCopy = useCopy("static");
+        const [supportBefore = "Contact: ", supportAfter = ""] = staticCopy.supportBody.split("{email}");
+        return (
+          <StaticPage title={staticCopy.supportTitle}>
+            {supportBefore}
+            <a className="underline text-white/90" href={`mailto:${APP.CONTACT_EMAIL}`}>{APP.CONTACT_EMAIL}</a>
+            {supportAfter}
+          </StaticPage>
+        );
+      }
+
+      // ====== OAUTH CALLBACK ======
+      function OAuthCallbackPage() {
+        const oauthCopy = useCopy("oauth");
+        const query = useMemo(() => {
+          const params = new URLSearchParams(window.location.search);
+          const obj = {};
+          for (const [k, v] of params.entries()) obj[k] = v;
+          return obj;
+        }, []);
+
+        const validState = (() => {
+          const expected = sessionStorage.getItem("tt_state");
+          return expected && query.state === expected;
+        })();
+
+        const debug = String(query.debug || "").trim() === "1";
+        const [errorDetail, setErrorDetail] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            if (!query.code || debug) return;
+
+            try {
+              sessionStorage.setItem("tt_auth", JSON.stringify({
+                code: query.code,
+                state: query.state,
+                ts: Date.now()
+              }));
+
+          if (!validState) {
+            setErrorDetail(oauthCopy.invalidState);
+            return;
+          }
+
+              const exchangePayload = {
+                code: query.code,
+                state: query.state,
+                redirect_uri: OAUTH.redirectUri
+              };
+
+              const resp = await fetch(`${APP.API}/api/tiktok/exchange`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(exchangePayload)
+              });
+
+              if (resp.ok) {
+                const data = await resp.json();
+
+                if (data?.token_scopes) sessionStorage.setItem("tt_token_scopes", data.token_scopes);
+                if (data?.sid) sessionStorage.setItem("rf_sid_token", data.sid);
+
+                if (data?.profile) {
+                  sessionStorage.setItem("tt_user", JSON.stringify(data.profile));
+                  window.dispatchEvent(new Event(AUTH_EVENT));
+                }
+
+                const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+                window.history.replaceState({}, "", cleanUrl);
+
+                setTimeout(() => Router.nav("/app/accounts"), 150);
+              } else {
+                const errorText = await resp.text();
+                setErrorDetail(errorText);
+              }
+            } catch (e) {
+              setErrorDetail(e.message);
+            }
+          })();
+        }, [query.code, query.state, debug, validState, oauthCopy.invalidState]);
+
+        return (
+          <Container className="py-10">
+            <div className="rf-surface rf-shadow rounded-3xl p-8">
+              <h1 className="text-2xl font-extrabold text-white/90">{oauthCopy.title}</h1>
+
+              {errorDetail && (
+                <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+                  <div className="font-semibold mb-2">{oauthCopy.authFailed}</div>
+                  <pre className="whitespace-pre-wrap text-xs bg-black/30 p-3 rounded-2xl border border-white/10">{errorDetail}</pre>
+                  <div className="mt-3">
+                    <GhostBtn onClick={() => Router.nav("/")}>{oauthCopy.backToHome}</GhostBtn>
+                  </div>
+                </div>
+              )}
+
+              {!errorDetail && query.code && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/80">
+                  {oauthCopy.exchanging}
+                </div>
+              )}
+
+              {!query.code && !errorDetail && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/80">
+                  {oauthCopy.noCode}
+                </div>
+              )}
+            </div>
+          </Container>
+        );
+      }
+
+      // ====== APP ROOT ======
+      function App() {
+        const route = useRoute();
+        const hasCode = new URLSearchParams(window.location.search).has("code");
+
+        let user = null;
+        try {
+          const cached = sessionStorage.getItem("tt_user");
+          if (cached) user = JSON.parse(cached);
+        } catch {}
+
+        let page = null;
+
+        if (hasCode) {
+          page = <OAuthCallbackPage />;
+          return (
+            <div>
+              <Navbar user={user} />
+              <main>{page}</main>
+            </div>
+          );
+        }
+
+        const isApp = route.startsWith("/app/");
+        if (isApp) {
+          if (route.startsWith("/app/dashboard")) page = <DashboardPage />;
+          else if (route.startsWith("/app/library")) page = <LibraryPage />;
+          else if (route.startsWith("/app/planner")) page = <PlannerPage />;
+          else if (route.startsWith("/app/queue")) page = <QueuePage />;
+          else if (route.startsWith("/app/accounts")) page = <AccountsPage user={user} />;
+          else page = <DashboardPage />;
+
+          return (
+            <div>
+              <Navbar user={user} />
+              <main>
+                <AppShell user={user}>{page}</AppShell>
+              </main>
+            </div>
+          );
+        }
+
+        if (route.startsWith("/export-demo")) {
+          page = (
+            <Container className="py-10">
+              <ExportDemoPage />
+            </Container>
+          );
+        } else if (route.startsWith("/privacy")) page = <PrivacyPage />;
+        else if (route.startsWith("/terms")) page = <TermsPage />;
+        else if (route.startsWith("/support")) page = <SupportPage />;
+        else page = <HomePage />;
+
+        return (
+          <div>
+            <Navbar user={user} />
+            <main>{page}</main>
+          </div>
+        );
+      }
+
+      // ====== INIT ======
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(
+        <LocaleProvider>
+          <App />
+        </LocaleProvider>
+      );
+    </script>
+  </body>
+</html>

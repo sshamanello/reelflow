@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReelFlow - OAuth Test</title>
+  <!-- Configuration -->
+  <script src="config.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0b;
+      color: #fff;
+      padding: 2rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 8px;
+    }
+    .tiktok { background: #000; color: #fff; }
+    .youtube { background: #ff0000; color: #fff; }
+    #result {
+      margin-top: 20px;
+      padding: 16px;
+      background: #1a1a1f;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    .error { color: #ef4444; }
+    .success { color: #10b981; }
+  </style>
+</head>
+<body>
+  <h1>🚀 ReelFlow OAuth Test</h1>
+  <p>This is a simple test page for OAuth connections.</p>
+
+  <div>
+    <button class="tiktok" onclick="openAuth('tiktok')">
+      Connect TikTok
+    </button>
+    <button class="youtube" onclick="openAuth('youtube')">
+      Connect YouTube
+    </button>
+  </div>
+
+  <div id="result">Waiting for OAuth flow...</div>
+
+  <script>
+    function openAuth(platform) {
+      const config = CONFIG[platform];
+      const state = Math.random().toString(36).substring(7);
+
+      let authUrl;
+      if (platform === 'tiktok') {
+        const scopes = config.scopes.join(',');
+        authUrl = `${config.authUrl}?client_key=${config.clientKey}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&state=${state}`;
+      } else if (platform === 'youtube') {
+        const scopes = config.scopes.join(' ');
+        authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&state=${state}`;
+      }
+
+      window.open(authUrl, '_blank', 'width=600,height=700');
+    }
+
+    window.addEventListener('message', async (event) => {
+      if (event.data.type === 'oauth_code') {
+        const code = event.data.code;
+        const platform = event.data.platform || 'tiktok';
+
+        document.getElementById('result').textContent = `Code received! Exchanging for token...`;
+
+        try {
+          const response = await fetch(`${CONFIG.API_BASE}/api/oauth/exchange`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              platform,
+              code,
+              redirect_uri: CONFIG.REDIRECT_URI
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.ok) {
+            document.getElementById('result').innerHTML = `<span class="success">✓ Success!</span>\n\nProfile:\n${JSON.stringify(data.profile, null, 2)}`;
+          } else {
+            document.getElementById('result').innerHTML = `<span class="error">✗ Failed</span>\n\n${JSON.stringify(data, null, 2)}`;
+          }
+        } catch (error) {
+          document.getElementById('result').innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
