@@ -1,0 +1,28 @@
+{
+  "name": "reelflow-worker",
+  "version": "1.0.0",
+  "description": "ReelFlow - Multi-platform content automation platform",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:production": "wrangler dev --env production",
+    "deploy": "wrangler deploy",
+    "deploy:prod": "wrangler deploy --env production",
+    "secrets": "upload-secrets.bat",
+    "secret:prod": "echo 'Usage: npm run secret:prod <SECRET_NAME>' && wrangler secret put",
+    "tail": "wrangler tail",
+    "login": "wrangler login"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "tiktok",
+    "youtube",
+    "oauth"
+  ],
+  "author": "sshamanello",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^4.61.1"
+  }
+}

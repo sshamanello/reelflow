@@ -3,12 +3,19 @@
 /* -------------------- utils -------------------- */
 
 function makeCORS(env, origin) {
-  const allowed = "https://sshamanello.ru";
+  // Используем ALLOWED_ORIGINS из wrangler.toml или значение по умолчанию
+  const allowed = env.ALLOWED_ORIGINS || "https://sshamanello.ru";
+
+  // Проверяем если origin в списке разрешенных
+  const allowedList = allowed.split(",").map(o => o.trim());
+  const isAllowed = !origin || allowedList.includes(origin) || allowedList.includes("*");
+
   return {
-    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Origin": isAllowed ? (origin || allowedList[0]) : "null",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Vary": "Origin",
   };
 }
 
@@ -86,6 +93,9 @@ function normalizeProfile(u = {}) {
     profile_deep_link: u.profile_deep_link || null, // может быть null в basic — ок
     handle,
     username: handle,
+    // Статистика (если доступна) - TikTok может возвращать stats_data
+    stats: u.stats_data || u.stats || null,
+    followers_count: u.stats_data?.followers_count || u.follower_count || u.followers_count || null,
   };
 }
 
@@ -180,8 +190,14 @@ async function tiktokMe(access_token) {
     const j = JSON.parse(text);
     const u = j?.data?.user || j?.data || {};
 
+    // Логируем что у нас есть до нормализации
+    console.log("TikTok user data before normalize:", JSON.stringify(u));
+
     // нормализуем, НЕ рассчитываем на username/profile_deep_link (их нет в basic)
-    return normalizeProfile(u);
+    const normalized = normalizeProfile(u);
+    console.log("TikTok user data after normalize:", JSON.stringify(normalized));
+
+    return normalized;
   } catch (e) {
     return { __error: true, status: 0, body: String(e?.message || e) };
   }
@@ -449,7 +465,10 @@ async function handleUpload(req, env, cors) {
   const sess = await getSession(env, sid);
   if (!sess) return json({ error: "unauthorized" }, cors, 401);
 
-  const access_token = sess.access_token;
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) {
+    return json({ error: "no_tiktok_token", message: "Please connect TikTok account first" }, cors, 401);
+  }
 
   // 1) form-data
   const form = await req.formData();
@@ -551,8 +570,50 @@ async function handleUpload(req, env, cors) {
     offset = end + 1;
   }
 
-  // 5) Готово (Inbox Upload — без финального complete)
-  return json({ status: "uploaded", publish_id: publishId, video_id: publishId }, cors, 200);
+  // 5) PUBLISH — перемещаем видео из Inbox в черновики
+  const publishBody = {
+    publish_id: publishId,
+  };
+
+  console.log("Publishing video to TikTok drafts...");
+  const publishResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/publish/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(publishBody),
+  });
+
+  const publishText = await publishResp.text();
+  console.log("Inbox PUBLISH status:", publishResp.status, "body:", publishText);
+
+  let publishJson = {};
+  try { publishJson = JSON.parse(publishText); } catch {}
+
+  if (!publishResp.ok) {
+    // Если publish не работает (API не одобрен), возвращаем upload с сообщением
+    console.log("Publish failed, returning uploaded_to_inbox");
+    return json({
+      status: "uploaded_to_inbox",
+      publish_id: publishId,
+      message: "Video uploaded to TikTok inbox. Note: Content Publishing API may require approval before videos appear in drafts.",
+      publish_error: {
+        status: publishResp.status,
+        detail: publishJson || publishText
+      }
+    }, cors, 200);
+  }
+
+  // 6) Готово — видео в черновиках TikTok
+  const videoId = publishJson?.data?.video_id || publishId;
+  return json({
+    status: "published",
+    publish_id: publishId,
+    video_id: videoId,
+    video_url: publishJson?.data?.video_url,
+  }, cors, 200);
 }
 
 

@@ -4,6 +4,7 @@
 # Cloudflare
 .wrangler/
 .wranglerdev/
+.dev.vars      # Local development secrets!
 
 # Node modules (if using any)
 node_modules/

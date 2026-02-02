@@ -12,7 +12,7 @@ const CONFIG = {
   // Backend API URL
   API_BASE: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8787'
-    : '',
+    : 'https://reelflow-worker.sshamanello.workers.dev',
 
   // OAuth Redirect URI (auto-detected)
   REDIRECT_URI: window.location.origin + '/callback',
