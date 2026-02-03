@@ -456,6 +456,40 @@ async function handleMe(req, env, cors) {
   return json({ profiles }, cors, 200);
 }
 
+/* -------------------- logout -------------------- */
+
+async function handleLogout(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  console.log("handleLogout sid:", sid);
+
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  try {
+    const body = await req.json();
+    const platform = body?.platform;
+
+    if (!platform || (platform !== 'tiktok' && platform !== 'youtube')) {
+      return json({ error: "invalid_platform" }, cors, 400);
+    }
+
+    // Удаляем токен платформы из сессии
+    if (platform === 'tiktok') {
+      delete sess.tiktok;
+    } else if (platform === 'youtube') {
+      delete sess.youtube;
+    }
+
+    // Обновляем сессию
+    await putSession(env, sid, sess);
+
+    return json({ success: true, platform }, cors, 200);
+  } catch (e) {
+    console.error("handleLogout error:", e);
+    return json({ error: "server_error" }, cors, 500);
+  }
+}
+
 /* -------------------- upload stub -------------------- */
 
 // POST /api/tiktok/upload — загрузка видео в Inbox (fixed 5MB chunks)
@@ -755,6 +789,9 @@ export default {
       // OAuth (unified for both platforms)
       if (url.pathname === "/api/oauth/exchange" && req.method === "POST") {
         return await handleExchange(req, env, cors);
+      }
+      if (url.pathname === "/api/oauth/logout" && req.method === "POST") {
+        return await handleLogout(req, env, cors);
       }
       if (url.pathname === "/api/me" && req.method === "GET") {
         return await handleMe(req, env, cors);

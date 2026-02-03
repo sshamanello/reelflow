@@ -35,7 +35,7 @@ APP_NAME = "ReelFlow"
 COOKIE_NAME = "rf_sid"
 COOKIE_TTL_DAYS = "30"
 # Добавьте ваш домен сюда!
-ALLOWED_ORIGINS = "https://sshamanello.ru"
+ALLOWED_ORIGINS = "https://sshamanello.ru,https://www.sshamanello.ru"
 
 [[env.production.kv_namespaces]]
 binding = "SESSIONS"

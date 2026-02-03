@@ -2981,6 +2981,34 @@
         }));
       };
 
+      const handleLogout = async (platform) => {
+        try {
+          // Отправляем запрос на бэкенд для удаления токена
+          await apiRequest('/api/oauth/logout', {
+            method: 'POST',
+            body: JSON.stringify({ platform }),
+          });
+        } catch (error) {
+          console.log('[Logout] Server error:', error);
+          // Продолжаем даже если запрос failed - очищаем локально
+        }
+
+        // Очищаем профиль из состояния
+        setProfiles(prev => {
+          const newProfiles = { ...prev };
+          delete newProfiles[platform];
+          return newProfiles;
+        });
+
+        showToast({
+          title: lang === 'ru' ? 'Аккаунт отключён' : 'Account disconnected',
+          description: lang === 'ru'
+            ? `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} ${lang === 'ru' ? 'отключён от вашего аккаунта' : 'has been disconnected'}`
+            : `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} has been disconnected from your account`,
+          type: 'success',
+        });
+      };
+
       const handleUploadClick = (projectId) => {
         const hasProfile = Object.keys(profiles).length > 0;
         if (!hasProfile) {
@@ -3081,19 +3109,37 @@
                               )}
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setCurrentPage('settings');
-                              setShowAuthModal(true);
-                            }}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${
-                              profiles.tiktok
-                                ? `${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                                : 'bg-black text-white hover:bg-gray-800'
-                            }`}
-                          >
-                            {profiles.tiktok ? 'Reconnect' : 'Connect'}
-                          </button>
+                          <div className="flex gap-2">
+                            {profiles.tiktok ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setCurrentPage('settings');
+                                    setShowAuthModal(true);
+                                  }}
+                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                >
+                                  Reconnect
+                                </button>
+                                <button
+                                  onClick={() => handleLogout('tiktok')}
+                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-100 text-red-700 hover:bg-red-200`}
+                                >
+                                  Disconnect
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setCurrentPage('settings');
+                                  setShowAuthModal(true);
+                                }}
+                                className="px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-black text-white hover:bg-gray-800"
+                              >
+                                Connect
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -3121,19 +3167,37 @@
                               )}
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setCurrentPage('settings');
-                              setShowAuthModal(true);
-                            }}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${
-                              profiles.youtube
-                                ? `${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
-                          >
-                            {profiles.youtube ? 'Reconnect' : 'Connect'}
-                          </button>
+                          <div className="flex gap-2">
+                            {profiles.youtube ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setCurrentPage('settings');
+                                    setShowAuthModal(true);
+                                  }}
+                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                >
+                                  Reconnect
+                                </button>
+                                <button
+                                  onClick={() => handleLogout('youtube')}
+                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-100 text-red-700 hover:bg-red-200`}
+                                >
+                                  Disconnect
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setCurrentPage('settings');
+                                  setShowAuthModal(true);
+                                }}
+                                className="px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-600 text-white hover:bg-red-700"
+                              >
+                                Connect
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
