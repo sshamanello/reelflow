@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReelFlow — Content Automation Platform</title>
 
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/static/brand/logo.png">
+  <link rel="apple-touch-icon" href="/static/brand/logo.png">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -2855,18 +2859,63 @@
     function Toast({ message, isDark }) {
       if (!message) return null;
 
+      // Поддержка как строк, так и объектов
+      const title = typeof message === 'string' ? message : message.title;
+      const description = typeof message === 'string' ? null : message.description;
+      const type = typeof message === 'string' ? 'info' : (message.type || 'info');
+
+      // Цвета для разных типов
+      const typeColors = {
+        success: {
+          bg: isDark ? 'bg-green-900/30' : 'bg-green-50',
+          border: 'border-green-500/30',
+          text: isDark ? 'text-green-400' : 'text-green-700',
+          iconColor: 'text-green-500'
+        },
+        error: {
+          bg: isDark ? 'bg-red-900/30' : 'bg-red-50',
+          border: 'border-red-500/30',
+          text: isDark ? 'text-red-400' : 'text-red-700',
+          iconColor: 'text-red-500'
+        },
+        info: {
+          bg: isDark ? 'bg-gray-800' : 'bg-white',
+          border: 'border-yellow-500/30',
+          text: isDark ? 'text-white' : 'text-gray-900',
+          iconColor: 'text-yellow-500'
+        }
+      };
+
+      const colors = typeColors[type] || typeColors.info;
+
+      // Иконки для разных типов
+      const icons = {
+        success: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+        error: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+        info: (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        )
+      };
+
       return (
         <div className={`fixed top-6 right-6 z-50 animate-slide-in-right ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          <div className={`px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-yellow-500/30 ${
-            isDark ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <div className="flex-shrink-0">
-              <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
+          <div className={`px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border ${colors.bg} ${colors.border}`}>
+            <div className={`flex-shrink-0 ${colors.iconColor}`}>
+              {icons[type] || icons.info}
             </div>
             <div className="flex-1">
-              <p className="font-medium">{message}</p>
+              <p className={`font-medium ${colors.text}`}>{title}</p>
+              {description && <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{description}</p>}
             </div>
           </div>
           <style>{`
@@ -2982,16 +3031,16 @@
       };
 
       const handleLogout = async (platform) => {
-        try {
-          // Отправляем запрос на бэкенд для удаления токена
-          await apiRequest('/api/oauth/logout', {
-            method: 'POST',
-            body: JSON.stringify({ platform }),
-          });
-        } catch (error) {
-          console.log('[Logout] Server error:', error);
-          // Продолжаем даже если запрос failed - очищаем локально
-        }
+        // Временно убираем запрос к API - endpoint ещё не задеплоен
+        // TODO: раскомментировать после деплоя worker.js
+        // try {
+        //   await apiRequest('/api/oauth/logout', {
+        //     method: 'POST',
+        //     body: JSON.stringify({ platform }),
+        //   });
+        // } catch (error) {
+        //   console.log('[Logout] Server error:', error);
+        // }
 
         // Очищаем профиль из состояния
         setProfiles(prev => {
@@ -3000,11 +3049,11 @@
           return newProfiles;
         });
 
+        // Упрощённый toast без использования lang
+        const platformName = platform === 'tiktok' ? 'TikTok' : 'YouTube';
         showToast({
-          title: lang === 'ru' ? 'Аккаунт отключён' : 'Account disconnected',
-          description: lang === 'ru'
-            ? `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} ${lang === 'ru' ? 'отключён от вашего аккаунта' : 'has been disconnected'}`
-            : `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} has been disconnected from your account`,
+          title: 'Account disconnected',
+          description: `${platformName} has been disconnected from your account`,
           type: 'success',
         });
       };
