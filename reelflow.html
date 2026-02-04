@@ -1980,7 +1980,7 @@
       const [privacy, setPrivacy] = useState('public'); // 'public', 'unlisted', 'private'
 
       // Platforms
-      const [selectedPlatforms, setSelectedPlatforms] = useState(['tiktok']);
+      const [selectedPlatforms, setSelectedPlatforms] = useState([]);
       const [profiles, setProfiles] = useState({});
 
       // Schedule
@@ -1993,7 +1993,7 @@
       const [error, setError] = useState('');
       const [result, setResult] = useState(null);
 
-      // Load profiles on mount
+      // Load profiles on mount and when window regains focus
       React.useEffect(() => {
         const loadProfiles = async () => {
           try {
@@ -2004,6 +2004,14 @@
           }
         };
         loadProfiles();
+
+        // Reload profiles when window regains focus (after OAuth redirect)
+        const handleFocus = () => loadProfiles();
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+          window.removeEventListener('focus', handleFocus);
+        };
       }, []);
 
       if (!isOpen) return null;
@@ -2197,7 +2205,7 @@
         setDescription('');
         setHashtags('');
         setPrivacy('public');
-        setSelectedPlatforms(['tiktok']);
+        setSelectedPlatforms([]);
         setScheduleType('now');
         setScheduleDate('');
         setScheduleTime('');
@@ -2465,15 +2473,15 @@
               {/* TikTok */}
               <button
                 onClick={() => togglePlatform('tiktok')}
-                disabled={!profiles.tiktok}
+                disabled={!profiles.tiktok || profiles.tiktok?.__error}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
                   selectedPlatforms.includes('tiktok')
                     ? 'bg-black text-white'
-                    : profiles.tiktok
+                    : profiles.tiktok && !profiles.tiktok?.__error
                     ? isDark
                       ? 'bg-background-900 border-2 border-transparent hover:border-gray-600'
                       : 'bg-gray-100 border-2 border-transparent hover:border-gray-300'
-                    : 'opacity-50 cursor-not-only'
+                    : 'opacity-50 cursor-not-allowed'
                 } ${isDark ? 'text-gray-200' : 'text-gray-900'}`}
               >
                 <Icons.TikTok />
@@ -2493,11 +2501,11 @@
               {/* YouTube */}
               <button
                 onClick={() => togglePlatform('youtube')}
-                disabled={!profiles.youtube}
+                disabled={!profiles.youtube || profiles.youtube?.__error}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
                   selectedPlatforms.includes('youtube')
                     ? 'bg-red-600 text-white'
-                    : profiles.youtube
+                    : profiles.youtube && !profiles.youtube?.__error
                     ? isDark
                       ? 'bg-background-900 border-2 border-transparent hover:border-gray-600'
                       : 'bg-gray-100 border-2 border-transparent hover:border-gray-300'
