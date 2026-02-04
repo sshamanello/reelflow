@@ -541,7 +541,7 @@
       });
     }
 
-    async function uploadVideo(file) {
+    async function uploadVideo(file, platform = 'tiktok') {
       const formData = new FormData();
       formData.append('file', file);
 
@@ -551,7 +551,12 @@
         headers['Authorization'] = `Bearer ${sid}`;
       }
 
-      const response = await fetch(`${API_BASE}/api/tiktok/upload`, {
+      // Определяем endpoint в зависимости от платформы
+      const uploadEndpoint = platform === 'youtube'
+        ? '/api/youtube/upload'
+        : '/api/tiktok/upload';
+
+      const response = await fetch(`${API_BASE}${uploadEndpoint}`, {
         method: 'POST',
         headers,
         body: formData,
@@ -563,8 +568,8 @@
           const errorData = await response.json();
           console.error('[uploadVideo] Error response:', errorData);
 
-          // Extract TikTok error code if available
-          if (errorData.detail?.error?.code) {
+          // Extract platform-specific error codes
+          if (platform === 'tiktok' && errorData.detail?.error?.code) {
             errorDetail = `: ${errorData.detail.error.code}`;
           } else if (errorData.error) {
             errorDetail = `: ${errorData.error}`;
@@ -574,7 +579,7 @@
           errorDetail = await response.text();
         }
 
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}${errorDetail}`);
+        throw new Error(`Upload failed (${platform}): ${response.status} ${response.statusText}${errorDetail}`);
       }
 
       return await response.json();
@@ -2087,9 +2092,14 @@
         setError('');
         try {
           console.log('[Upload] Starting upload for:', file.name);
+          console.log('[Upload] Selected platforms:', selectedPlatforms);
+
+          // Определяем платформу для загрузки (первая из выбранных)
+          const targetPlatform = selectedPlatforms[0] || 'tiktok';
+          console.log('[Upload] Uploading to:', targetPlatform);
 
           // Upload video with timeout
-          const uploadPromise = uploadVideo(file);
+          const uploadPromise = uploadVideo(file, targetPlatform);
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Upload timeout - please try again')), 60000)
           );

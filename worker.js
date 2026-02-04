@@ -650,7 +650,118 @@ async function handleUpload(req, env, cors) {
   }, cors, 200);
 }
 
+/* -------------------- YouTube upload -------------------- */
 
+// POST /api/youtube/upload — загрузка видео на YouTube через resumable upload
+async function handleYoutubeUpload(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.youtube?.access_token;
+  if (!access_token) {
+    return json({ error: "no_youtube_token", message: "Please connect YouTube account first" }, cors, 401);
+  }
+
+  try {
+    // 1) Получаем файл из form-data
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!file || typeof file.arrayBuffer !== "function") {
+      return json({ error: "no_file", message: "Provide a video file in form-data: file=<blob>" }, cors, 400);
+    }
+
+    const mime = file.type || "video/mp4";
+    const size = Number(file.size || 0);
+    if (!Number.isFinite(size) || size <= 0) {
+      return json({ error: "invalid_file_size", message: "File size must be > 0" }, cors, 400);
+    }
+
+    console.log("[YouTube Upload] File size:", size, "MIME:", mime);
+
+    // 2) Инициализируем resumable upload session
+    const initBody = {
+      snippet: {
+        title: form.get("title") || "ReelFlow Upload",
+        description: form.get("description") || "",
+        categoryId: "22", // People & Blogs
+        defaultLanguage: "en",
+        defaultAudioLanguage: "en"
+      },
+      status: {
+        privacyStatus: form.get("privacy") || "public", // public, private, unlisted
+        selfDeclaredMadeForKids: false
+      }
+    };
+
+    // Добавляем теги если есть
+    const tags = form.get("tags");
+    if (tags) {
+      initBody.snippet.tags = tags.split(",").map(t => t.trim()).filter(t => t);
+    }
+
+    console.log("[YouTube Upload] Init request:", JSON.stringify(initBody, null, 2));
+
+    const initResp = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status,contentDetails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json",
+        "X-Upload-Content-Length": String(size),
+        "X-Upload-Content-Type": mime
+      },
+      body: JSON.stringify(initBody)
+    });
+
+    if (!initResp.ok) {
+      const errorText = await initResp.text();
+      console.error("[YouTube Upload] Init failed:", initResp.status, errorText);
+      return json({ error: "youtube_init_failed", status: initResp.status, detail: errorText }, cors, initResp.status);
+    }
+
+    // 3) Получаем upload URL из заголовков
+    const uploadUrl = initResp.headers.get("Location");
+    if (!uploadUrl) {
+      return json({ error: "no_upload_url", message: "YouTube did not return upload URL" }, cors, 500);
+    }
+
+    console.log("[YouTube Upload] Got upload URL:", uploadUrl);
+
+    // 4) Загружаем видео
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const uploadResp = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": mime,
+        "Content-Length": String(size)
+      },
+      body: buf
+    });
+
+    if (!uploadResp.ok) {
+      const errorText = await uploadResp.text();
+      console.error("[YouTube Upload] Upload failed:", uploadResp.status, errorText);
+      return json({ error: "youtube_upload_failed", status: uploadResp.status, detail: errorText }, cors, uploadResp.status);
+    }
+
+    // 5) Получаем информацию о загруженном видео
+    const videoData = await uploadResp.json();
+    console.log("[YouTube Upload] Success! Video ID:", videoData.id);
+
+    return json({
+      success: true,
+      publish_id: videoData.id,
+      video_id: videoData.id,
+      platform: "youtube",
+      upload_url: `https://www.youtube.com/watch?v=${videoData.id}`
+    }, cors, 200);
+
+  } catch (e) {
+    console.error("[YouTube Upload] Error:", e);
+    return json({ error: "upload_error", message: e?.message || String(e) }, cors, 500);
+  }
+}
 
 /* -------------------- projects & videos -------------------- */
 
@@ -809,6 +920,11 @@ export default {
       }
       if (url.pathname === "/api/tiktok/publish" && req.method === "POST") {
         return json({ status: "ok" }, cors);
+      }
+
+      // YouTube upload
+      if (url.pathname === "/api/youtube/upload" && req.method === "POST") {
+        return await handleYoutubeUpload(req, env, cors);
       }
 
       // Debug
