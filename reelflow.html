@@ -214,6 +214,10 @@
         navAnalytics: "Analytics",
         navSettings: "Settings",
 
+        // Footer
+        privacyPolicy: "Privacy Policy",
+        termsOfService: "Terms of Service",
+
         // Header
         searchPlaceholder: "Search projects, videos...",
         notifications: "Notifications",
@@ -281,6 +285,10 @@
         navUploads: "Загрузки",
         navAnalytics: "Аналитика",
         navSettings: "Настройки",
+
+        // Footer
+        privacyPolicy: "Политика конфиденциальности",
+        termsOfService: "Условия использования",
 
         // Header
         searchPlaceholder: "Поиск проектов, видео...",
@@ -1230,6 +1238,29 @@
                 )}
               </div>
             )}
+          </div>
+
+          {/* Footer links */}
+          <div className={`absolute bottom-20 left-0 right-0 px-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            <div className="flex gap-3 text-xs">
+              <a
+                href="https://www.sshamanello.ru/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {t.privacyPolicy}
+              </a>
+              <span>•</span>
+              <a
+                href="https://www.sshamanello.ru/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {t.termsOfService}
+              </a>
+            </div>
           </div>
         </aside>
       );
