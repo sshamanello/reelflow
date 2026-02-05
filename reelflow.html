@@ -1409,6 +1409,7 @@
 
         setUploading(true);
         try {
+          // 1. Сначала загрузим видео в TikTok
           const formData = new FormData();
           formData.append('file', file);
 
@@ -1425,17 +1426,33 @@
           });
 
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Upload failed response:', errorText);
             throw new Error('Upload failed');
           }
 
           const data = await response.json();
-          onUploadSuccess({
-            id: Date.now(),
-            name: file.name,
-            status: 'uploaded',
-            ref: data.publish_id,
-            local_preview_url: previewUrl, // Локальный preview URL
+          console.log('TikTok upload success:', data);
+
+          // 2. Теперь сохраним метаданные в нашу базу
+          const saveResponse = await apiRequest('/api/videos', {
+            method: 'POST',
+            body: JSON.stringify({
+              videoName: file.name,
+              publishId: data.publish_id,
+              status: 'uploaded',
+              local_preview_url: previewUrl,
+            }),
           });
+
+          if (!saveResponse.ok) {
+            throw new Error('Failed to save video metadata');
+          }
+
+          const savedVideo = saveResponse.video;
+
+          // 3. Обновляем состояние
+          onUploadSuccess(savedVideo);
         } catch (error) {
           console.error('Upload error:', error);
           alert('Upload failed: ' + error.message);

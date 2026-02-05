@@ -651,6 +651,14 @@ async function handleUpload(req, env, cors) {
   if (!Number.isFinite(size) || size <= 0) {
     return json({ error: "invalid_file_size", message: "File size must be > 0" }, cors, 400);
   }
+
+  console.log("[TikTok Upload] File info:", {
+    name: file.name,
+    type: mime,
+    size: size,
+    sizeMB: (size / (1024 * 1024)).toFixed(2) + ' MB'
+  });
+
   const buf = new Uint8Array(await file.arrayBuffer());
 
   // 2) базовый размер чанка
@@ -686,8 +694,41 @@ async function handleUpload(req, env, cors) {
   console.log("Inbox INIT status:", initResp.status, "body:", initText);
 
   let initJson = {};
-  try { initJson = JSON.parse(initText); } catch {}
-  const initOk = initResp.ok && (!initJson.error || initJson.error.code === "ok");
+  try { initJson = JSON.parse(initText); } catch { }
+
+  // Detailed error logging
+  if (!initResp.ok) {
+    console.error("[TikTok Upload] INIT failed:", {
+      status: initResp.status,
+      statusText: initResp.statusText,
+      body: initJson,
+      headers: Object.fromEntries(initResp.headers.entries())
+    });
+
+    const errorCode = initJson?.error?.code;
+    const errorMessage = initJson?.error?.message;
+
+    return json({
+      error: "init_failed",
+      status: initResp.status,
+      detail: {
+        code: errorCode,
+        message: errorMessage,
+        full_response: initJson
+      }
+    }, cors, 400);
+  }
+
+  // Check for error in JSON even if status is OK
+  if (initJson.error && initJson.error.code !== "ok") {
+    console.error("[TikTok Upload] Error in OK response:", initJson.error);
+    return json({
+      error: "tiktok_api_error",
+      detail: initJson.error
+    }, cors, 400);
+  }
+
+  const initOk = !initJson.error || initJson.error.code === "ok";
   if (!initOk) {
     return json({ error: "init_failed", status: initResp.status, detail: initJson || initText }, cors, 400);
   }
@@ -960,7 +1001,7 @@ async function handleSaveVideo(req, env, cors) {
   if (!sid) return json({ error: "unauthorized" }, cors, 401);
 
   const body = await req.json();
-  const { projectId, videoName, publishId, status } = body;
+  const { videoName, publishId, status, local_preview_url, thumbnail_url } = body;
 
   const videosKey = `videos:${sid}`;
   const raw = await env.SESSIONS.get(videosKey);
@@ -968,10 +1009,11 @@ async function handleSaveVideo(req, env, cors) {
 
   const newVideo = {
     id: Date.now(),
-    projectId,
     name: videoName || 'Untitled',
     publishId,
     status: status || 'uploaded',
+    local_preview_url: local_preview_url || null,
+    thumbnail_url: thumbnail_url || null,
     createdAt: new Date().toISOString(),
   };
 
@@ -979,21 +1021,6 @@ async function handleSaveVideo(req, env, cors) {
   await env.SESSIONS.put(videosKey, JSON.stringify(videos), {
     expirationTtl: 60 * 60 * 24 * 30,
   });
-
-  // Update project video count
-  const projectsKey = `projects:${sid}`;
-  const projectsRaw = await env.SESSIONS.get(projectsKey);
-  if (projectsRaw) {
-    const projects = JSON.parse(projectsRaw);
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-      project.videos = (project.videos || 0) + 1;
-      project.lastActive = 'just_now';
-      await env.SESSIONS.put(projectsKey, JSON.stringify(projects), {
-        expirationTtl: 60 * 60 * 24 * 30,
-      });
-    }
-  }
 
   return json({ video: newVideo }, cors, 201);
 }
