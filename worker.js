@@ -456,6 +456,136 @@ async function handleMe(req, env, cors) {
   return json({ profiles }, cors, 200);
 }
 
+/* -------------------- creator_info -------------------- */
+
+async function handleCreatorInfo(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) {
+    return json({ error: "no_tiktok_token", message: "Please connect TikTok account first" }, cors, 401);
+  }
+
+  try {
+    // Get creator info from TikTok
+    const profile = await tiktokMe(access_token);
+
+    if (profile.__error) {
+      return json({ error: "tiktok_api_error", detail: profile }, cors, 500);
+    }
+
+    // Return creator info with privacy options
+    return json({
+      avatar_url: profile.avatar_url,
+      nickname: profile.display_name,
+      handle: profile.handle,
+      can_post: true, // Assuming if they have token, they can post
+      privacy_level_options: [
+        { value: "PUBLIC_TO_EVERYONE", label: "Public" },
+        { value: "MUTUAL_FOLLOW_FRIEND", label: "Friends" },
+        { value: "SELF_ONLY", label: "Only Me" }
+      ],
+      interaction_settings: {
+        allow_comment: true,
+        allow_duet: true,
+        allow_stitch: true
+      }
+    }, cors, 200);
+  } catch (e) {
+    console.error("Creator info error:", e);
+    return json({ error: "server_error", message: e?.message || String(e) }, cors, 500);
+  }
+}
+
+/* -------------------- publish -------------------- */
+
+async function handlePublish(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) {
+    return json({ error: "no_tiktok_token", message: "Please connect TikTok account first" }, cors, 401);
+  }
+
+  try {
+    const body = await req.json();
+    const {
+      video_ref,
+      title = "",
+      hashtags = [],
+      privacy_level,
+      comment_disabled = false,
+      duet_disabled = false,
+      stitch_disabled = false,
+      is_branded_content = false,
+      brand_content_type = []
+    } = body;
+
+    if (!video_ref) {
+      return json({ error: "missing_video_ref" }, cors, 400);
+    }
+
+    if (!privacy_level) {
+      return json({ error: "missing_privacy_level" }, cors, 400);
+    }
+
+    // Validate branded content + SELF_ONLY combination
+    if (is_branded_content && brand_content_type.includes('BRANDED_CONTENT') && privacy_level === 'SELF_ONLY') {
+      return json({ error: "invalid_privacy_branded_content", message: "Cannot use 'Only Me' privacy with branded content" }, cors, 400);
+    }
+
+    // Call TikTok publish API
+    const publishBody = {
+      video_ref: video_ref,
+      title: title,
+      hashtags: hashtags,
+      privacy_level: privacy_level,
+      comment_disabled: comment_disabled,
+      duet_disabled: duet_disabled,
+      stitch_disabled: stitch_disabled,
+      brand_authorized: is_branded_content,
+      brand_content_type: brand_content_type
+    };
+
+    console.log("Publishing to TikTok:", JSON.stringify(publishBody, null, 2));
+
+    const response = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/publish/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${access_token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(publishBody),
+    });
+
+    const responseText = await response.text();
+    console.log("TikTok publish response status:", response.status, "body:", responseText);
+
+    if (!response.ok) {
+      return json({ error: "publish_failed", status: response.status, detail: responseText }, cors, 500);
+    }
+
+    const responseData = JSON.parse(responseText);
+    const videoId = responseData?.data?.video_id;
+
+    return json({
+      success: true,
+      video_id: videoId,
+      video_url: responseData?.data?.video_url || null,
+      publish_id: video_ref
+    }, cors, 200);
+
+  } catch (e) {
+    console.error("Publish error:", e);
+    return json({ error: "server_error", message: e?.message || String(e) }, cors, 500);
+  }
+}
+
 /* -------------------- logout -------------------- */
 
 async function handleLogout(req, env, cors) {
@@ -918,8 +1048,11 @@ export default {
       if (url.pathname === "/api/tiktok/upload" && req.method === "POST") {
         return await handleUpload(req, env, cors);
       }
+      if (url.pathname === "/api/tiktok/creator_info" && req.method === "GET") {
+        return await handleCreatorInfo(req, env, cors);
+      }
       if (url.pathname === "/api/tiktok/publish" && req.method === "POST") {
-        return json({ status: "ok" }, cors);
+        return await handlePublish(req, env, cors);
       }
 
       // YouTube upload

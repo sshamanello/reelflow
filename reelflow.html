@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReelFlow — Content Automation Platform</title>
+  <title>ReelFlow Studio</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/brand/logo.png">
@@ -17,7 +17,6 @@
       theme: {
         extend: {
           colors: {
-            // Dark theme palette
             background: {
               900: '#0a0a0b',
               800: '#131316',
@@ -29,7 +28,6 @@
               hover: '#23232a',
               border: '#2a2a35',
             },
-            // Light theme palette
             light: {
               background: '#f8fafc',
               surface: '#ffffff',
@@ -52,23 +50,6 @@
               800: '#115e59',
               900: '#134e4a',
             },
-            accent: {
-              DEFAULT: '#f97316',
-              50: '#fff7ed',
-              100: '#ffedd5',
-              200: '#fed7aa',
-              300: '#fdba74',
-              400: '#fb923c',
-              500: '#f97316',
-              600: '#ea580c',
-              700: '#c2410c',
-              800: '#9a3412',
-              900: '#7c2d12',
-            },
-            success: '#10b981',
-            warning: '#f59e0b',
-            error: '#ef4444',
-            info: '#3b82f6',
           },
           fontFamily: {
             sans: ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
@@ -76,8 +57,6 @@
           animation: {
             'fade-in': 'fadeIn 0.3s ease-in-out',
             'slide-up': 'slideUp 0.4s ease-out',
-            'slide-in-right': 'slideInRight 0.3s ease-out',
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           },
           keyframes: {
             fadeIn: {
@@ -87,10 +66,6 @@
             slideUp: {
               '0%': { transform: 'translateY(10px)', opacity: '0' },
               '100%': { transform: 'translateY(0)', opacity: '1' },
-            },
-            slideInRight: {
-              '0%': { transform: 'translateX(-10px)', opacity: '0' },
-              '100%': { transform: 'translateX(0)', opacity: '1' },
             },
           },
         },
@@ -157,43 +132,19 @@
       background: #94a3b8;
     }
 
-    /* Smooth transitions */
     .transition-smooth {
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Subtle grid pattern - Dark */
     .grid-pattern {
       background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
                         linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
       background-size: 50px 50px;
     }
 
-    /* Subtle grid pattern - Light */
     body.light .grid-pattern {
       background-image: linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
                         linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-    }
-
-    /* Chart bars animation */
-    @keyframes growUp {
-      from { transform: scaleY(0); }
-      to { transform: scaleY(1); }
-    }
-
-    .chart-bar {
-      transform-origin: bottom;
-      animation: growUp 0.6s ease-out forwards;
-    }
-
-    /* Status indicator pulse */
-    @keyframes statusPulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .status-active {
-      animation: statusPulse 2s ease-in-out infinite;
     }
   </style>
 </head>
@@ -201,207 +152,171 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useContext, createContext } = React;
 
     // ====== TRANSLATIONS ======
     const translations = {
       en: {
-        // Navigation
-        navDashboard: "Dashboard",
-        navProjects: "Projects",
-        navScheduler: "Scheduler",
-        navUploads: "Uploads",
-        navAnalytics: "Analytics",
+        navLibrary: "Content Library",
         navSettings: "Settings",
-
-        // Footer
         privacyPolicy: "Privacy Policy",
         termsOfService: "Terms of Service",
 
-        // Header
-        searchPlaceholder: "Search projects, videos...",
-        notifications: "Notifications",
+        libraryTitle: "Content Library",
+        libraryEmpty: "No videos yet",
+        libraryEmptyDesc: "Upload your first video to start publishing to TikTok",
+        uploadVideo: "Upload Video",
+        publishToTikTok: "Publish to TikTok",
+        notPublished: "Not published",
 
-        // KPI Cards
-        kpiUploaded: "Uploaded Videos",
-        kpiScheduled: "Scheduled Posts",
-        kpiPublished: "Published Videos",
-        kpiErrors: "Errors",
-        kpiThisWeek: "This week",
-        kpiAllTime: "All time",
+        publishFlowTitle: "Publish to TikTok",
+        step1Title: "Creator Info",
+        step2Title: "Content Preview",
+        step3Title: "Video Details",
+        step4Title: "Privacy Settings",
+        step5Title: "Interaction Settings",
+        step6Title: "Commercial Disclosure",
+        step7Title: "Review & Consent",
+        step8Title: "Publishing Status",
 
-        // Analytics
-        analyticsTitle: "Activity Overview",
-        analyticsPlatforms: "Platform Distribution",
-        last7Days: "Last 7 days",
+        canPost: "Can Post",
+        cannotPost: "Cannot Post",
+        nickname: "Nickname",
 
-        // Recent Activity
-        recentActivity: "Recent Activity",
-        activityVideoUploaded: "Video uploaded to",
-        activityPublished: "Published to",
-        activityScheduled: "Scheduled for",
-        activityError: "Upload failed to",
+        videoPreview: "Video Preview",
+        noWatermark: "No Watermark",
 
-        // Projects
-        projectsTitle: "Projects & Channels",
-        createProject: "Create Project",
-        videos: "videos",
-        lastActive: "Last active",
-        active: "Active",
-        paused: "Paused",
+        videoTitle: "Title",
+        videoTitlePlaceholder: "Enter video title...",
+        hashtags: "Hashtags",
+        hashtagsPlaceholder: "Enter hashtags (comma separated)...",
 
-        // Scheduler
-        schedulerTitle: "Content Pipeline",
-        todo: "To Do",
-        inProgress: "In Progress",
-        done: "Done",
-        uploadTask: "Upload videos",
-        scheduleTask: "Schedule posts",
-        reviewTask: "Review content",
+        privacyLevel: "Privacy Level",
+        privacyPublic: "Public - Everyone can see",
+        privacyFriends: "Friends - Only followers can see",
+        privacyPrivate: "Only Me - Only you can see",
 
-        // Status
-        statusUploading: "Uploading",
-        statusScheduled: "Scheduled",
-        statusPublished: "Published",
-        statusFailed: "Failed",
+        allowComments: "Allow Comments",
+        allowDuet: "Allow Duet",
+        allowStitch: "Allow Stitch",
 
-        // Actions
-        viewAll: "View All",
-        addNew: "Add New",
-        export: "Export",
-        quickActions: "Quick Actions",
+        brandedContent: "Branded Content",
+        brandedContentDesc: "Is this branded content?",
+        yourBrand: "Your Brand",
+        brandedContentType: "Branded Content Type",
+        brandedContentOnlyMe: "Note: 'Only Me' privacy is not allowed for branded content",
 
-        // Time
-        justNow: "Just now",
-        minutesAgo: "{minutes}m ago",
-        hoursAgo: "{hours}h ago",
-        daysAgo: "{days}d ago",
+        consentTitle: "Consent & Agreement",
+        consentYourBrand: "By posting, you agree to TikTok's Music Usage Confirmation.",
+        consentBranded: "By posting, you agree to TikTok's Branded Content Policy and Music Usage Confirmation.",
+        agree: "I agree",
+
+        statusUploading: "Uploading...",
+        statusProcessing: "Processing...",
+        statusPublished: "Published Successfully!",
+        statusFailed: "Publishing Failed",
+        tryAgain: "Try Again",
+        close: "Close",
+        viewOnTikTok: "View on TikTok",
+
+        next: "Next",
+        back: "Back",
+        publish: "Publish",
+        cancel: "Cancel",
+
+        connectTikTok: "Connect TikTok",
+        connected: "Connected",
+        notConnected: "Not connected",
+        disconnect: "Disconnect",
+        reconnect: "Reconnect",
       },
       ru: {
-        // Navigation
-        navDashboard: "Дашборд",
-        navProjects: "Проекты",
-        navScheduler: "Планировщик",
-        navUploads: "Загрузки",
-        navAnalytics: "Аналитика",
+        navLibrary: "Библиотека контента",
         navSettings: "Настройки",
-
-        // Footer
         privacyPolicy: "Политика конфиденциальности",
         termsOfService: "Условия использования",
 
-        // Header
-        searchPlaceholder: "Поиск проектов, видео...",
-        notifications: "Уведомления",
+        libraryTitle: "Библиотека контента",
+        libraryEmpty: "Пока нет видео",
+        libraryEmptyDesc: "Загрузите первое видео, чтобы начать публикацию в TikTok",
+        uploadVideo: "Загрузить видео",
+        publishToTikTok: "Опубликовать в TikTok",
+        notPublished: "Не опубликовано",
 
-        // KPI Cards
-        kpiUploaded: "Загружено видео",
-        kpiScheduled: "Запланировано постов",
-        kpiPublished: "Опубликовано видео",
-        kpiErrors: "Ошибки",
-        kpiThisWeek: "За неделю",
-        kpiAllTime: "За всё время",
+        publishFlowTitle: "Публикация в TikTok",
+        step1Title: "Информация о создателе",
+        step2Title: "Предпросмотр контента",
+        step3Title: "Детали видео",
+        step4Title: "Настройки приватности",
+        step5Title: "Настройки взаимодействия",
+        step6Title: "Коммерческий контент",
+        step7Title: "Проверка и согласие",
+        step8Title: "Статус публикации",
 
-        // Analytics
-        analyticsTitle: "Обзор активности",
-        analyticsPlatforms: "Распределение по платформам",
-        last7Days: "Последние 7 дней",
+        canPost: "Можно публиковать",
+        cannotPost: "Нельзя публиковать",
+        nickname: "Никнейм",
 
-        // Recent Activity
-        recentActivity: "Последняя активность",
-        activityVideoUploaded: "Видео загружено в",
-        activityPublished: "Опубликовано в",
-        activityScheduled: "Запланировано на",
-        activityError: "Загрузка не удалась в",
+        videoPreview: "Предпросмотр видео",
+        noWatermark: "Без водяного знака",
 
-        // Projects
-        projectsTitle: "Проекты и каналы",
-        createProject: "Создать проект",
-        videos: "видео",
-        lastActive: "Последняя активность",
-        active: "Активен",
-        paused: "Приостановлен",
+        videoTitle: "Название",
+        videoTitlePlaceholder: "Введите название видео...",
+        hashtags: "Хештеги",
+        hashtagsPlaceholder: "Введите хештеги (через запятую)...",
 
-        // Scheduler
-        schedulerTitle: "Контент-пайплайн",
-        todo: "К выполнению",
-        inProgress: "В работе",
-        done: "Готово",
-        uploadTask: "Загрузить видео",
-        scheduleTask: "Запланировать посты",
-        reviewTask: "Проверить контент",
+        privacyLevel: "Уровень приватности",
+        privacyPublic: "Публичный - Все могут видеть",
+        privacyFriends: "Друзья - Только подписчики",
+        privacyPrivate: "Только я - Только вы можете видеть",
 
-        // Status
-        statusUploading: "Загрузка",
-        statusScheduled: "Запланировано",
-        statusPublished: "Опубликовано",
-        statusFailed: "Ошибка",
+        allowComments: "Разрешить комментарии",
+        allowDuet: "Разрешить Duets",
+        allowStitch: "Разрешить Stitch",
 
-        // Actions
-        viewAll: "Посмотреть все",
-        addNew: "Добавить",
-        export: "Экспорт",
-        quickActions: "Быстрые действия",
+        brandedContent: "Брендированный контент",
+        brandedContentDesc: "Это брендированный контент?",
+        yourBrand: "Ваш бренд",
+        brandedContentType: "Тип брендированного контента",
+        brandedContentOnlyMe: "Примечание: Приватность 'Только я' недоступна для брендированного контента",
 
-        // Time
-        justNow: "Только что",
-        minutesAgo: "{minutes}м назад",
-        hoursAgo: "{hours}ч назад",
-        daysAgo: "{days}д назад",
+        consentTitle: "Согласие и соглашение",
+        consentYourBrand: "Публикуя, вы соглашаетесь с подтверждением использования музыки TikTok.",
+        consentBranded: "Публикуя, вы соглашаетесь с политикой брендированного контента и подтверждением использования музыки TikTok.",
+        agree: "Я соглашаюсь",
+
+        statusUploading: "Загрузка...",
+        statusProcessing: "Обработка...",
+        statusPublished: "Успешно опубликовано!",
+        statusFailed: "Публикация не удалась",
+        tryAgain: "Попробовать снова",
+        close: "Закрыть",
+        viewOnTikTok: "Смотреть на TikTok",
+
+        next: "Далее",
+        back: "Назад",
+        publish: "Опубликовать",
+        cancel: "Отмена",
+
+        connectTikTok: "Подключить TikTok",
+        connected: "Подключено",
+        notConnected: "Не подключено",
+        disconnect: "Отключить",
+        reconnect: "Переподключить",
       },
     };
 
     // ====== ICONS ======
     const Icons = {
-      Dashboard: () => (
+      Library: () => (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-        </svg>
-      ),
-      Projects: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-      ),
-      Scheduler: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
-      Uploads: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-        </svg>
-      ),
-      Analytics: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
       Settings: () => (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      Search: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      ),
-      Bell: () => (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-      ChevronDown: () => (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      ),
-      TrendUp: () => (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       ),
       Sun: () => (
@@ -424,19 +339,29 @@
           <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
         </svg>
       ),
-      Instagram: () => (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 01-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 017.8 2m-.2 2A3.6 3.6 0 004 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 003.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 011.25 1.25A1.25 1.25 0 0117.25 8 1.25 1.25 0 0116 6.75a1.25 1.25 0 011.25-1.25M12 7a5 5 0 015 5 5 5 0 01-5 5 5 5 0 01-5-5 5 5 0 015-5m0 2a3 3 0 00-3 3 3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3z"/>
-        </svg>
-      ),
-      YouTube: () => (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/>
-        </svg>
-      ),
       Plus: () => (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+      X: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ),
+      ChevronRight: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      ),
+      ChevronLeft: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      ),
+      Upload: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>
       ),
     };
@@ -445,32 +370,28 @@
     const API_BASE = 'https://reelflow-worker.sshamanello.workers.dev';
     const CONFIG = {
       API_BASE: API_BASE,
-      REDIRECT_URI: 'https://sshamanello.ru/ReelFlow', // без слеша в конце!
+      REDIRECT_URI: 'https://sshamanello.ru/ReelFlow',
       tiktok: {
         authUrl: 'https://www.tiktok.com/v2/auth/authorize',
         clientKey: 'awz0u4dkl7733fhp',
         scopes: ['user.info.basic', 'video.upload', 'video.publish']
-      },
-      youtube: {
-        authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-        clientId: '651052782933-l5lh624e5ssrianbj4ln9ge8stbs6s4e.apps.googleusercontent.com',
-        scopes: ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtubepartner']
       }
     };
 
+    // ====== CONTEXTS ======
+    const TranslationContext = createContext();
+    const ThemeContext = createContext();
+
     // ====== API CLIENT ======
-    // Получаем сохранённый session ID из localStorage
     function getSessionId() {
       return localStorage.getItem('reelflow_sid');
     }
 
-    // Сохраняем session ID в localStorage
     function saveSessionId(sid) {
       localStorage.setItem('reelflow_sid', sid);
       console.log('[Session] Saved sid:', sid);
     }
 
-    // Удаляем session ID (logout)
     function clearSessionId() {
       localStorage.removeItem('reelflow_sid');
       console.log('[Session] Cleared sid');
@@ -486,10 +407,8 @@
           'Content-Type': 'application/json',
           ...options.headers,
         },
-        // Убираем credentials: 'include' - не нужно для cross-origin с localStorage
       };
 
-      // Добавляем sid в заголовок Authorization, если есть
       if (sid) {
         opts.headers['Authorization'] = `Bearer ${sid}`;
       }
@@ -503,7 +422,6 @@
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
 
-      // Если сервер вернул новый sid - сохраняем его
       if (data.sid && data.sid !== sid) {
         saveSessionId(data.sid);
       }
@@ -512,2823 +430,1239 @@
     }
 
     // ====== OAUTH HELPERS ======
-    function openPlatformAuth(platform) {
-      const config = CONFIG[platform];
+    function openTikTokAuth() {
+      const config = CONFIG.tiktok;
       const state = Math.random().toString(36).substring(7);
-
-      console.log('[OAuth] Platform:', platform);
-      console.log('[OAuth] Config:', config);
-      console.log('[OAuth] Redirect URI:', CONFIG.REDIRECT_URI);
-
-      let authUrl;
-      if (platform === 'tiktok') {
-        const scopes = config.scopes.join(',');
-        authUrl = `${config.authUrl}?client_key=${config.clientKey}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&state=${state}`;
-      } else if (platform === 'youtube') {
-        const scopes = config.scopes.join(' ');
-        authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&state=${state}`;
-      }
+      const scopes = config.scopes.join(',');
+      const authUrl = `${config.authUrl}?client_key=${config.clientKey}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=code&state=${state}`;
 
       console.log('[OAuth] Auth URL:', authUrl);
       const popup = window.open(authUrl, '_blank', 'width=600,height=700');
       console.log('[OAuth] Popup opened:', popup);
 
-      // Проверка на блокировку popup
       if (!popup || popup.closed || typeof popup.closed == 'undefined') {
-        console.error('[OAuth] Popup was blocked! Please allow popups for this site.');
-        alert('Пожалуйста, разрешите всплывающие окна для этого сайта и попробуйте снова.');
+        console.error('[OAuth] Popup was blocked!');
+        alert('Please allow popups for this site and try again.');
       }
 
       return popup;
     }
 
-    async function exchangePlatformCode(platform, code) {
+    async function exchangeTikTokCode(code) {
       return await apiRequest('/api/oauth/exchange', {
         method: 'POST',
-        body: JSON.stringify({ platform, code, redirect_uri: CONFIG.REDIRECT_URI }),
+        body: JSON.stringify({ platform: 'tiktok', code, redirect_uri: CONFIG.REDIRECT_URI }),
       });
     }
 
-    async function uploadVideo(file, platform = 'tiktok') {
-      const formData = new FormData();
-      formData.append('file', file);
+    // ====== COMPONENTS ======
 
-      const sid = getSessionId();
-      const headers = {};
-      if (sid) {
-        headers['Authorization'] = `Bearer ${sid}`;
-      }
-
-      // Определяем endpoint в зависимости от платформы
-      const uploadEndpoint = platform === 'youtube'
-        ? '/api/youtube/upload'
-        : '/api/tiktok/upload';
-
-      const response = await fetch(`${API_BASE}${uploadEndpoint}`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let errorDetail = '';
-        try {
-          const errorData = await response.json();
-          console.error('[uploadVideo] Error response:', errorData);
-
-          // Extract platform-specific error codes
-          if (platform === 'tiktok' && errorData.detail?.error?.code) {
-            errorDetail = `: ${errorData.detail.error.code}`;
-          } else if (errorData.error) {
-            errorDetail = `: ${errorData.error}`;
-          }
-        } catch (e) {
-          // If parsing fails, use status text
-          errorDetail = await response.text();
-        }
-
-        throw new Error(`Upload failed (${platform}): ${response.status} ${response.statusText}${errorDetail}`);
-      }
-
-      return await response.json();
-    }
-
-    // ====== DUMMY DATA ======
-    const kpiData = {
-      uploaded: { value: 1247, change: 12.5, trend: 'up' },
-      scheduled: { value: 384, change: 8.2, trend: 'up' },
-      published: { value: 892, change: -2.1, trend: 'down' },
-      errors: { value: 23, change: -15.3, trend: 'up' },
-    };
-
-    const projectsData = [
-      {
-        id: 1,
-        name: "Tech Reviews Channel",
-        platforms: ['tiktok', 'youtube'],
-        videos: 234,
-        lastActive: '2h ago',
-        status: 'active',
-      },
-      {
-        id: 2,
-        name: "Lifestyle Brand",
-        platforms: ['instagram', 'tiktok'],
-        videos: 156,
-        lastActive: '5h ago',
-        status: 'active',
-      },
-      {
-        id: 3,
-        name: "Educational Content",
-        platforms: ['youtube', 'tiktok', 'instagram'],
-        videos: 412,
-        lastActive: '1d ago',
-        status: 'paused',
-      },
-      {
-        id: 4,
-        name: "Product Demos",
-        platforms: ['tiktok'],
-        videos: 89,
-        lastActive: '3d ago',
-        status: 'active',
-      },
-    ];
-
-    const activityData = [
-      { id: 1, type: 'upload', platform: 'TikTok', video: 'Review #234', time: '2m ago', status: 'success' },
-      { id: 2, type: 'publish', platform: 'Instagram', video: 'Lifestyle clip', time: '15m ago', status: 'success' },
-      { id: 3, type: 'schedule', platform: 'YouTube', video: 'Tutorial #45', time: '1h ago', status: 'success' },
-      { id: 4, type: 'error', platform: 'TikTok', video: 'Short #189', time: '2h ago', status: 'error' },
-      { id: 5, type: 'upload', platform: 'YouTube', video: 'Demo #12', time: '3h ago', status: 'success' },
-    ];
-
-    const scheduleData = {
-      todo: [
-        { id: 1, title: "Upload batch videos", project: "Tech Reviews", priority: "high" },
-        { id: 2, title: "Review scheduled content", project: "Lifestyle Brand", priority: "medium" },
-      ],
-      inProgress: [
-        { id: 3, title: "Schedule 50 posts", project: "Educational", priority: "high", progress: 65 },
-        { id: 4, title: "Batch processing", project: "Product Demos", priority: "low", progress: 30 },
-      ],
-      done: [
-        { id: 5, title: "Connect TikTok account", project: "Tech Reviews", priority: "high" },
-        { id: 6, title: "Create automation workflow", project: "Lifestyle Brand", priority: "medium" },
-      ],
-    };
-
-    const chartData = [65, 45, 78, 52, 83, 69, 91];
-
-    // ====== UI COMPONENTS ======
-    function KPICard({ title, value, change, trend, delay }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const isPositive = trend === 'up' && change > 0 || trend === 'down' && change < 0;
-
-      return (
-        <div
-          className={`border rounded-2xl p-6 transition-smooth hover:shadow-lg animate-slide-up ${
-            isDark
-              ? 'bg-surface border-surface-border hover:border-gray-700'
-              : 'bg-white border-light-border hover:border-gray-300 hover:shadow-xl'
-          }`}
-          style={{ animationDelay: `${delay}ms` }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{title}</div>
-            <div className={`flex items-center gap-1 text-xs font-semibold ${
-              isPositive ? 'text-success' : 'text-error'
-            }`}>
-              <Icons.TrendUp />
-              <span>{Math.abs(change)}%</span>
-            </div>
-          </div>
-          <div className={`text-3xl font-bold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{value.toLocaleString()}</div>
-          <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{t.kpiThisWeek}</div>
-        </div>
-      );
-    }
-
-    function ActivityChart({ data }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      // Show empty state if no data or all zeros
-      const hasData = data && data.length > 0 && data.some(v => v > 0);
-
-      if (!hasData) {
-        return (
-          <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  {t.analyticsTitle}
-                </div>
-                <div className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {t.last7Days}
-                </div>
-              </div>
-            </div>
-            <div className="h-48 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-3">📈</div>
-                <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {lang === 'ru' ? 'Недостаточно данных' : 'Not enough data'}
-                </p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
-                  {lang === 'ru' ? 'График появится после первой загрузки' : 'Chart will appear after first upload'}
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      const maxValue = Math.max(...data);
-
-      return (
-        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                {t.analyticsTitle}
-              </div>
-              <div className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                {t.last7Days}
-              </div>
-            </div>
-            <button className="text-sm text-primary hover:text-primary-400 font-medium transition-smooth">
-              {t.viewAll}
-            </button>
-          </div>
-
-          <div className="flex items-end justify-between gap-3 h-48">
-            {data.map((value, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div
-                  className="w-full bg-gradient-to-t from-primary to-primary-400 rounded-t-lg chart-bar"
-                  style={{
-                    height: `${(value / maxValue) * 100}%`,
-                    animationDelay: `${index * 80}ms`
-                  }}
-                />
-                <div className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    function PlatformDistribution({ platforms = [] }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      return (
-        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-          <div className={`text-lg font-semibold mb-6 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            {t.analyticsPlatforms}
-          </div>
-          {platforms.length > 0 ? (
-            <div className="space-y-4">
-              {platforms.map((platform) => (
-                <div key={platform.name}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {platform.name}
-                    </span>
-                    <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                      {platform.percentage}%
-                    </span>
-                  </div>
-                  <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-background-700' : 'bg-gray-200'}`}>
-                    <div
-                      className={`h-full ${platform.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${platform.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-40 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl mb-2">📊</div>
-                <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {lang === 'ru' ? 'Нет данных' : 'No data'}
-                </p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
-                  {lang === 'ru' ? 'Статистика появится позже' : 'Statistics will appear later'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    function RecentActivity({ profiles, activities = [] }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      // Check if user has connected accounts
-      const hasConnectedAccount = profiles && (profiles.tiktok || profiles.youtube);
-
-      const getActivityMessage = (activity) => {
-        switch (activity.type) {
-          case 'upload':
-            return `${t.activityVideoUploaded} ${activity.platform}`;
-          case 'publish':
-            return `${t.activityPublished} ${activity.platform}`;
-          case 'schedule':
-            return `${t.activityScheduled} ${activity.platform}`;
-          case 'error':
-            return `${t.activityError} ${activity.platform}`;
-          default:
-            return '';
-        }
-      };
-
-      // Don't show if no connected account
-      if (!hasConnectedAccount) {
-        return null;
-      }
-
-      return (
-        <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-          <div className="flex items-center justify-between mb-6">
-            <div className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-              {t.recentActivity}
-            </div>
-            <button className="text-sm text-primary hover:text-primary-400 font-medium transition-smooth">
-              {t.viewAll}
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {activities.length > 0 ? (
-              activities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className={`flex items-start gap-4 p-3 rounded-xl transition-smooth ${
-                    isDark ? 'hover:bg-background-700' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`w-2 h-2 rounded-full mt-2 status-active ${
-                    activity.status === 'success' ? 'bg-success' : 'bg-error'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium truncate ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                      {activity.video}
-                    </div>
-                    <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                      {getActivityMessage(activity)}
-                    </div>
-                  </div>
-                  <div className={`text-xs font-medium ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
-                    {activity.time}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-3">📭</div>
-                <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {lang === 'ru' ? 'Пока нет активности' : 'No activity yet'}
-                </p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
-                  {lang === 'ru' ? 'Здесь будет отображаться история ваших загрузок' : 'Your upload history will appear here'}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    function ProjectCard({ project, onClick }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      const getPlatformIcon = (platform) => {
-        switch (platform) {
-          case 'tiktok': return <Icons.TikTok />;
-          case 'instagram': return <Icons.Instagram />;
-          case 'youtube': return <Icons.YouTube />;
-          default: return null;
-        }
-      };
-
-      return (
-        <div
-          onClick={onClick}
-          className={`border rounded-2xl p-5 transition-smooth hover:shadow-lg cursor-pointer group relative ${
-            isDark
-              ? 'bg-surface border-surface-border hover:border-gray-700'
-              : 'bg-white border-light-border hover:border-gray-300 hover:shadow-xl'
-          }`}
-        >
-          {/* Hover overlay hint */}
-          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
-            <span className="text-primary font-semibold text-sm">Click to upload video →</span>
-          </div>
-
-          <div className="flex items-start justify-between mb-4 relative z-10">
-            <div className="flex-1 min-w-0">
-              <div
-                className={`text-base font-semibold truncate transition-colors group-hover:text-primary ${
-                  isDark ? 'text-gray-100' : 'text-gray-900'
-                }`}
-              >
-                {project.name}
-              </div>
-              <div className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                {project.videos} {t.videos}
-              </div>
-            </div>
-            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-              project.status === 'active'
-                ? 'bg-success/10 text-success'
-                : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
-            }`}>
-              {project.status === 'active' ? t.active : t.paused}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex gap-2">
-              {project.platforms.map((platform) => (
-                <div
-                  key={platform}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    isDark ? 'bg-background-700 text-gray-400' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {getPlatformIcon(platform)}
-                </div>
-              ))}
-            </div>
-            <div className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-500'}`}>
-              {t.lastActive}: {project.lastActive}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function TaskCard({ task, status, onMove }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const priorityColors = {
-        high: 'bg-error/10 text-error',
-        medium: 'bg-warning/10 text-warning',
-        low: isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600',
-      };
-
-      const columns = ['todo', 'inProgress', 'done'];
-      const currentIndex = columns.indexOf(status);
-
-      return (
-        <div
-          className={`border rounded-xl p-4 transition-smooth hover:border-gray-600 ${
-            isDark
-              ? 'bg-background-700 border-surface-border'
-              : 'bg-gray-50 border-light-border hover:border-gray-300'
-          }`}
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-              {task.title}
-            </div>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColors[task.priority]}`}>
-              {task.priority}
-            </span>
-          </div>
-          <div className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{task.project}</div>
-          {task.progress !== undefined && (
-            <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-background-900' : 'bg-gray-200'}`}>
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${task.progress}%` }}
-              />
-            </div>
-          )}
-
-          {/* Move buttons */}
-          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700/30">
-            {currentIndex > 0 && (
-              <button
-                onClick={() => onMove(columns[currentIndex - 1])}
-                className={`px-2 py-1 rounded text-xs font-medium transition-smooth ${
-                  isDark
-                    ? 'bg-background-900 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                    : 'bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300'
-                }`}
-              >
-                ← Back
-              </button>
-            )}
-            {currentIndex < columns.length - 1 && (
-              <button
-                onClick={() => onMove(columns[currentIndex + 1])}
-                className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-smooth ml-auto"
-              >
-                Next →
-              </button>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    function SchedulerBoard() {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      return (
-        <div className="grid grid-cols-3 gap-6">
-          {[
-            { key: 'todo', title: t.todo, tasks: scheduleData.todo },
-            { key: 'inProgress', title: t.inProgress, tasks: scheduleData.inProgress },
-            { key: 'done', title: t.done, tasks: scheduleData.done },
-          ].map((column) => (
-            <div
-              key={column.key}
-              className={`border rounded-2xl p-4 ${
-                isDark
-                  ? 'bg-background-800 border-surface-border'
-                  : 'bg-gray-50 border-light-border'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {column.title}
-                </div>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                  isDark ? 'bg-background-700 text-gray-500' : 'bg-white text-gray-600 shadow-sm'
-                }`}>
-                  {column.tasks.length}
-                </div>
-              </div>
-              <div className="space-y-3">
-                {column.tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} status={column.key} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // ====== THEME HOOK ======
-    const ThemeContext = React.createContext();
-
-    function useTheme() {
-      const context = React.useContext(ThemeContext);
-      return context;
-    }
-
-    // ====== LAYOUT COMPONENTS ======
-    function Sidebar({ currentPage, setCurrentPage, profiles, onConnectAccount, onShowToast }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const [collapsed, setCollapsed] = useState(false);
+    // Sidebar
+    function Sidebar({ currentPage, setCurrentPage, profiles, onConnectAccount }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
 
       const navItems = [
-        { id: 'dashboard', icon: <Icons.Dashboard />, label: t.navDashboard },
-        { id: 'projects', icon: <Icons.Projects />, label: t.navProjects, disabled: true, disabledMessage: lang === 'ru' ? 'Раздел "Проекты" появится в следующих этапах разработки' : 'Projects section will be available in future updates' },
-        { id: 'scheduler', icon: <Icons.Scheduler />, label: t.navScheduler },
-        { id: 'uploads', icon: <Icons.Uploads />, label: t.navUploads },
-        { id: 'analytics', icon: <Icons.Analytics />, label: t.navAnalytics, disabled: true, disabledMessage: lang === 'ru' ? 'Раздел "Аналитика" появится в следующих этапах разработки' : 'Analytics section will be available in future updates' },
+        { id: 'library', icon: <Icons.Library />, label: t.navLibrary },
         { id: 'settings', icon: <Icons.Settings />, label: t.navSettings },
       ];
 
-      const profileCount = Object.keys(profiles).length;
-      const primaryProfile = profiles.tiktok || profiles.youtube;
-
-      const getPlatformIcon = (platform) => {
-        switch (platform) {
-          case 'tiktok': return <Icons.TikTok />;
-          case 'youtube': return <Icons.YouTube />;
-          default: return null;
-        }
-      };
-
       return (
-        <aside
-          className={`fixed left-0 top-0 h-full border transition-all duration-300 z-40 ${
-            collapsed ? 'w-20' : 'w-64'
-          } ${
-            isDark
-              ? 'bg-background-800 border-surface-border'
-              : 'bg-white border-light-border shadow-lg'
-          }`}
-        >
+        <div className={`fixed left-0 top-0 h-screen w-64 border-r ${isDark ? 'bg-background-800 border-surface-border' : 'bg-white border-gray-200'} z-50`}>
           {/* Logo */}
-          <div className={`h-16 flex items-center justify-between px-6 border-b ${isDark ? 'border-surface-border' : 'border-light-border'}`}>
-            {!collapsed && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">RF</span>
-                </div>
-                <span className={`text-lg font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  ReelFlow
-                </span>
-              </div>
-            )}
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={`p-1.5 rounded-lg transition-smooth ${
-                isDark
-                  ? 'hover:bg-background-700 text-gray-400 hover:text-gray-200'
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Icons.ChevronDown />
-            </button>
+          <div className="p-6 border-b border-surface-border">
+            <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              ReelFlow Studio
+            </h1>
           </div>
 
           {/* Navigation */}
-          <nav className="p-4 space-y-1">
+          <nav className="p-4 space-y-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  if (item.disabled) {
-                    onShowToast(item.disabledMessage);
-                    return;
-                  }
-                  setCurrentPage(item.id);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth relative ${
-                  currentPage === item.id && !item.disabled
-                    ? 'bg-primary text-white font-medium'
+                onClick={() => setCurrentPage(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
+                  currentPage === item.id
+                    ? 'bg-primary text-white'
                     : isDark
-                      ? 'text-gray-400 hover:text-gray-200 hover:bg-background-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                } ${item.disabled ? 'cursor-not-allowed opacity-70 hover:opacity-80' : ''}`}
-                style={item.disabled ? {
-                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,200,0,0.1) 5px, rgba(255,200,0,0.1) 10px)',
-                } : undefined}
-                title={item.disabled ? item.disabledMessage : undefined}
+                      ? 'text-gray-400 hover:bg-surface hover:text-gray-100'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
               >
                 {item.icon}
-                {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
-                {!collapsed && item.disabled && (
-                  <span className="text-yellow-500 text-xs font-semibold uppercase tracking-wider">
-                    {lang === 'ru' ? 'Скоро' : 'Soon'}
-                  </span>
-                )}
-                {item.disabled && (
-                  <div className="absolute inset-0 border-2 border-dashed border-yellow-500/30 rounded-xl pointer-events-none" />
-                )}
+                <span className="font-medium">{item.label}</span>
               </button>
             ))}
           </nav>
 
-          {/* User section */}
-          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${isDark ? 'border-surface-border' : 'border-light-border'}`}>
-            {!collapsed ? (
-              <div className="space-y-3">
-                {/* Connected profiles */}
-                {profileCount > 0 && (
-                  <div className="flex gap-1">
-                    {profiles.tiktok && (
-                      <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center" title="TikTok connected">
-                        <Icons.TikTok />
-                      </div>
-                    )}
-                    {profiles.youtube && (
-                      <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center" title="YouTube connected">
-                        <Icons.YouTube />
-                      </div>
-                    )}
-                    {profileCount < 2 && (
-                      <button
-                        onClick={onConnectAccount}
-                        className="w-8 h-8 rounded-lg border border-dashed border-gray-600 flex items-center justify-center text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-smooth"
-                        title="Connect more accounts"
-                      >
-                        +
-                      </button>
-                    )}
+          {/* Profile Section */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-surface-border">
+            {profiles.tiktok ? (
+              <div className={`flex items-center gap-3 p-3 rounded-xl ${isDark ? 'bg-background-700' : 'bg-gray-100'}`}>
+                <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center">
+                  <Icons.TikTok />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-medium truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {profiles.tiktok.display_name}
                   </div>
-                )}
-
-                {/* Primary profile info */}
-                {primaryProfile ? (
-                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {primaryProfile.display_name || primaryProfile.title}
+                  <div className={`text-xs truncate ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                    {profiles.tiktok.handle || 'Connected'}
                   </div>
-                ) : (
-                  <button
-                    onClick={onConnectAccount}
-                    className="w-full px-3 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-600 transition-smooth"
-                  >
-                    Connect Account
-                  </button>
-                )}
+                </div>
               </div>
             ) : (
-              <div className="flex justify-center">
-                {profileCount > 0 ? (
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-600 flex items-center justify-center text-white">
-                    {primaryProfile?.display_name?.substring(0, 2).toUpperCase() || primaryProfile?.title?.substring(0, 2).toUpperCase() || 'JD'}
-                  </div>
-                ) : (
-                  <button
-                    onClick={onConnectAccount}
-                    className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center"
-                  >
-                    +
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={onConnectAccount}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-smooth"
+              >
+                <Icons.TikTok />
+                <span>{t.connectTikTok}</span>
+              </button>
             )}
           </div>
-
-          {/* Footer links */}
-          <div className={`absolute bottom-20 left-0 right-0 px-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            <div className="flex gap-3 text-xs">
-              <a
-                href="https://www.sshamanello.ru/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
-              >
-                {t.privacyPolicy}
-              </a>
-              <span>•</span>
-              <a
-                href="https://www.sshamanello.ru/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
-              >
-                {t.termsOfService}
-              </a>
-            </div>
-          </div>
-        </aside>
+        </div>
       );
     }
 
+    // Header
     function Header() {
-      const { lang, setLang } = React.useContext(TranslationContext);
-      const { isDark, toggleTheme } = React.useContext(ThemeContext);
-      const t = translations[lang];
-      const [searchQuery, setSearchQuery] = useState('');
+      const { lang, setLang } = useContext(TranslationContext);
+      const { isDark, toggleTheme } = useContext(ThemeContext);
 
       return (
-        <header
-          className={`h-16 border sticky top-0 z-30 transition-colors ${
-            isDark
-              ? 'bg-background-800/50 backdrop-blur-xl border-surface-border'
-              : 'bg-white/80 backdrop-blur-xl border-light-border shadow-sm'
-          }`}
-        >
-          <div className="h-full flex items-center justify-between px-6">
-            {/* Search */}
-            <div className="flex-1 max-w-md relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <Icons.Search />
-              </div>
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                  isDark
-                    ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                    : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-                }`}
-              />
-            </div>
+        <header className="flex items-center justify-between mb-6">
+          <div />
+          <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLang(lang === 'en' ? 'ru' : 'en')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-smooth ${isDark ? 'bg-surface hover:bg-surface-hover text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+            >
+              {lang === 'en' ? 'EN' : 'RU'}
+            </button>
 
-            {/* Right side */}
-            <div className="flex items-center gap-3">
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className={`p-2.5 rounded-xl border transition-smooth ${
-                  isDark
-                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {isDark ? <Icons.Sun /> : <Icons.Moon />}
-              </button>
-
-              {/* Language Switcher */}
-              <button
-                onClick={() => setLang(lang === 'en' ? 'ru' : 'en')}
-                className={`px-3 py-2 rounded-xl border transition-smooth flex items-center gap-2 ${
-                  isDark
-                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                <span className="text-base">🌐</span>
-                <span className="text-sm font-medium">{lang === 'en' ? 'EN' : 'RU'}</span>
-              </button>
-
-              {/* Notifications */}
-              <button
-                className={`relative p-2.5 rounded-xl border transition-smooth ${
-                  isDark
-                    ? 'bg-background-900 border-surface-border text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                <Icons.Bell />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent status-active" />
-              </button>
-            </div>
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-smooth ${isDark ? 'bg-surface hover:bg-surface-hover text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+            >
+              {isDark ? <Icons.Sun /> : <Icons.Moon />}
+            </button>
           </div>
         </header>
       );
     }
 
-    // ====== PAGES ======
-    function DashboardPage({ onUpload, setCurrentPage, profiles, activities, stats }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
+    // TikTok Publish Flow Modal
+    function TikTokPublishFlow({ isOpen, onClose, video, profile }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
+      const [currentStep, setCurrentStep] = useState(1);
+      const [creatorInfo, setCreatorInfo] = useState(null);
+      const [uploadedVideoFile, setUploadedVideoFile] = useState(null);
+      const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
+      const [publishData, setPublishData] = useState({
+        title: '',
+        hashtags: [],
+        privacy_level: '',
+        comment_disabled: false,
+        duet_disabled: false,
+        stitch_disabled: false,
+        is_branded_content: false,
+        brand_content_type: [], // 'YOUR_BRAND', 'BRANDED_CONTENT'
+        consent: false,
+      });
+      const [isPublishing, setIsPublishing] = useState(false);
+      const [publishResult, setPublishResult] = useState(null);
+      const videoInputRef = React.useRef(null);
 
-      // Check if user has connected at least one account
-      const hasConnectedAccount = profiles && (profiles.tiktok || profiles.youtube);
-      const profileCount = profiles ? Object.keys(profiles).length : 0;
-
-      // Use stats from App for authorized users
-      const currentKpiData = hasConnectedAccount ? stats : kpiData;
-
-      // Calculate chart data from activities (last 7 days)
-      const calculateChartData = () => {
-        const now = new Date();
-        const chartData = [];
-
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date(now);
-          date.setDate(date.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-
-          // Count activities for this day
-          const count = activities.filter(a => {
-            const activityDate = new Date(a.id);
-            const activityDateStr = activityDate.toISOString().split('T')[0];
-            return activityDateStr === dateStr;
-          }).length;
-
-          chartData.push(count);
+      // Reset video state when modal opens or closes
+      React.useEffect(() => {
+        if (isOpen) {
+          setUploadedVideoFile(null);
+          setVideoPreviewUrl(null);
         }
+      }, [isOpen]);
 
-        return chartData;
-      };
+      // Fetch creator info on open
+      useEffect(() => {
+        if (isOpen && currentStep === 1) {
+          fetchCreatorInfo();
+        }
+      }, [isOpen, currentStep]);
 
-      const chartData = calculateChartData();
-
-      // Calculate platform distribution from activities
-      const calculatePlatformDistribution = () => {
-        const distribution = {};
-        activities.forEach(activity => {
-          const platform = activity.platform || 'Unknown';
-          distribution[platform] = (distribution[platform] || 0) + 1;
-        });
-
-        const total = activities.length;
-        if (total === 0) return [];
-
-        return Object.entries(distribution).map(([name, count]) => ({
-          name,
-          percentage: Math.round((count / total) * 100),
-          color: name === 'TikTok' ? 'bg-primary' : name === 'YouTube' ? 'bg-error' : 'bg-accent'
-        }));
-      };
-
-      const platformData = calculatePlatformDistribution();
-
-      return (
-        <div className="space-y-6 animate-fade-in">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-6">
-            {hasConnectedAccount ? (
-              <>
-                <KPICard
-                  title={t.kpiUploaded}
-                  value={currentKpiData.uploaded.value}
-                  change={currentKpiData.uploaded.change}
-                  trend={currentKpiData.uploaded.trend}
-                  delay={0}
-                />
-                <KPICard
-                  title={t.kpiScheduled}
-                  value={currentKpiData.scheduled.value}
-                  change={currentKpiData.scheduled.change}
-                  trend={currentKpiData.scheduled.trend}
-                  delay={100}
-                />
-                <KPICard
-                  title={t.kpiPublished}
-                  value={currentKpiData.published.value}
-                  change={currentKpiData.published.change}
-                  trend={currentKpiData.published.trend}
-                  delay={200}
-                />
-                <KPICard
-                  title={t.kpiErrors}
-                  value={currentKpiData.errors.value}
-                  change={currentKpiData.errors.change}
-                  trend={currentKpiData.errors.trend}
-                  delay={300}
-                />
-              </>
-            ) : (
-              <div className="col-span-4">
-                <div className={`border-2 border-dashed rounded-2xl p-12 text-center ${
-                  isDark ? 'border-gray-700 bg-surface/50' : 'border-gray-300 bg-gray-50'
-                }`}>
-                  <div className="text-5xl mb-4">🔗</div>
-                  <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                    {lang === 'ru' ? 'Подключите аккаунт' : 'Connect an Account'}
-                  </h3>
-                  <p className={`text-sm mb-6 max-w-md mx-auto ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                    {lang === 'ru'
-                      ? 'Подключите TikTok или YouTube чтобы увидеть вашу статистику и начать публикацию контента'
-                      : 'Connect TikTok or YouTube to see your statistics and start publishing content'}
-                  </p>
-                  <button
-                    onClick={() => setCurrentPage('settings')}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
-                  >
-                    <Icons.Settings />
-                    <span>{lang === 'ru' ? 'Перейти к настройкам' : 'Go to Settings'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Charts - only show when authorized */}
-          {hasConnectedAccount && (
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2">
-                <ActivityChart data={chartData} />
-              </div>
-              <div>
-                <PlatformDistribution platforms={platformData} />
-              </div>
-            </div>
-          )}
-
-          {/* Recent Activity & Quick Actions - only when authorized */}
-          {hasConnectedAccount && (
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2">
-                <RecentActivity profiles={profiles} activities={activities} />
-              </div>
-              <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-                <div className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  {t.quickActions}
-                </div>
-                <div className="space-y-3">
-                  <button onClick={onUpload} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth">
-                    <Icons.Plus />
-                    <span>{t.addNew}</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage('uploads')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                      isDark
-                        ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Icons.Uploads />
-                    <span>{t.navUploads}</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage('scheduler')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                      isDark
-                        ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Icons.Scheduler />
-                    <span>{t.navScheduler}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Quick Actions - show when not authorized */}
-          {!hasConnectedAccount && (
-            <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-light-border'}`}>
-              <div className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                {t.quickActions}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <button onClick={onUpload} className="flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth">
-                  <Icons.Plus />
-                  <span>{t.addNew}</span>
-                </button>
-                <button
-                  onClick={() => setCurrentPage('uploads')}
-                  className={`flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                    isDark
-                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  <Icons.Uploads />
-                  <span>{t.navUploads}</span>
-                </button>
-                <button
-                  onClick={() => setCurrentPage('scheduler')}
-                  className={`flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                    isDark
-                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  <Icons.Scheduler />
-                  <span>{t.navScheduler}</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    function ProjectsPage({ onUpload }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const [projects, setProjects] = useState(projectsData);
-      const [showCreateModal, setShowCreateModal] = useState(false);
-      const [newProjectName, setNewProjectName] = useState('');
-      const [newProjectPlatforms, setNewProjectPlatforms] = useState(['tiktok']);
-
-      const handleCreateProject = async () => {
-        if (!newProjectName.trim()) return;
-
+      const fetchCreatorInfo = async () => {
         try {
-          const result = await apiRequest('/api/projects', {
+          const response = await apiRequest('/api/tiktok/creator_info');
+          setCreatorInfo(response);
+        } catch (error) {
+          console.error('Failed to fetch creator info:', error);
+        }
+      };
+
+      const handleVideoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('video/')) {
+          setUploadedVideoFile(file);
+          const url = URL.createObjectURL(file);
+          setVideoPreviewUrl(url);
+        }
+      };
+
+      const canProceed = () => {
+        switch (currentStep) {
+          case 1:
+            return creatorInfo?.can_post;
+          case 2:
+            return true;
+          case 3:
+            return true; // Title and hashtags are optional
+          case 4:
+            return publishData.privacy_level !== '';
+          case 5:
+            return true;
+          case 6:
+            if (!publishData.is_branded_content) return true;
+            // If branded content, at least one type must be selected
+            return publishData.brand_content_type.length > 0 &&
+                   !(publishData.brand_content_type.includes('BRANDED_CONTENT') && publishData.privacy_level === 'SELF_ONLY');
+          case 7:
+            return publishData.consent;
+          default:
+            return false;
+        }
+      };
+
+      const handlePublish = async () => {
+        setIsPublishing(true);
+        try {
+          let videoRef = video.ref;
+
+          // If user uploaded a new video, upload it first
+          if (uploadedVideoFile) {
+            const formData = new FormData();
+            formData.append('file', uploadedVideoFile);
+
+            const sid = getSessionId();
+            const headers = {};
+            if (sid) {
+              headers['Authorization'] = `Bearer ${sid}`;
+            }
+
+            const uploadResponse = await fetch(`${CONFIG.API_BASE}/api/tiktok/upload`, {
+              method: 'POST',
+              headers,
+              body: formData,
+            });
+
+            if (!uploadResponse.ok) {
+              throw new Error('Video upload failed');
+            }
+
+            const uploadData = await uploadResponse.json();
+            videoRef = uploadData.publish_id;
+          }
+
+          const response = await apiRequest('/api/tiktok/publish', {
             method: 'POST',
             body: JSON.stringify({
-              name: newProjectName,
-              platforms: newProjectPlatforms,
+              video_ref: videoRef,
+              ...publishData,
             }),
           });
-
-          setProjects([...projects, result.project]);
-          setNewProjectName('');
-          setNewProjectPlatforms(['tiktok']);
-          setShowCreateModal(false);
-        } catch (e) {
-          console.error('Failed to create project:', e);
+          setPublishResult({ success: true, data: response });
+          setCurrentStep(8);
+        } catch (error) {
+          setPublishResult({ success: false, error: error.message });
+          setCurrentStep(8);
+        } finally {
+          setIsPublishing(false);
         }
       };
 
-      const togglePlatform = (platform) => {
-        if (newProjectPlatforms.includes(platform)) {
-          setNewProjectPlatforms(newProjectPlatforms.filter(p => p !== platform));
-        } else {
-          setNewProjectPlatforms([...newProjectPlatforms, platform]);
-        }
-      };
+      const renderStep = () => {
+        switch (currentStep) {
+          case 1:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step1Title}
+                </h2>
+                {creatorInfo ? (
+                  <div className={`p-6 rounded-xl ${isDark ? 'bg-surface' : 'bg-gray-100'}`}>
+                    <div className="flex items-center gap-4 mb-4">
+                      {creatorInfo.avatar_url && (
+                        <img src={creatorInfo.avatar_url} alt="Avatar" className="w-16 h-16 rounded-full" />
+                      )}
+                      <div>
+                        <div className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {creatorInfo.nickname}
+                        </div>
+                        <div className={`flex items-center gap-2 text-sm ${creatorInfo.can_post ? 'text-green-500' : 'text-red-500'}`}>
+                          {creatorInfo.can_post ? <Icons.Check /> : <Icons.X />}
+                          {creatorInfo.can_post ? t.canPost : t.cannotPost}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`text-center py-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Loading...
+                  </div>
+                )}
+              </div>
+            );
 
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t.projectsTitle}</h1>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} mt-1`}>
-                Manage your content projects and connected channels
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
-            >
-              <Icons.Plus />
-              <span>{t.createProject}</span>
-            </button>
-          </div>
+          case 2:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step2Title}
+                </h2>
 
-          <div className="grid grid-cols-2 gap-6">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onClick={() => onUpload(project.id)}
-              />
-            ))}
-          </div>
-
-          {/* Create Project Modal */}
-          {showCreateModal && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-              <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up`}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    {t.createProject}
-                  </h2>
-                  <button onClick={() => setShowCreateModal(false)} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
-                    ✕
-                  </button>
+                <div className="flex justify-center">
+                  <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'} flex items-center justify-center`} style={{ height: '400px', width: '225px' }}>
+                    {videoPreviewUrl || video.local_preview_url ? (
+                      <video
+                        src={videoPreviewUrl || video.local_preview_url}
+                        controls
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <Icons.Upload />
+                        <p className="mt-2">No preview available</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                <div className="flex justify-center">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoUpload}
+                    className="hidden"
+                    id="video-no-watermark-upload"
+                    ref={videoInputRef}
+                  />
+                  <button
+                    onClick={() => videoInputRef.current?.click()}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                  >
+                    <Icons.Upload />
+                    {videoPreviewUrl ? 'Change Video' : 'Upload Different Video'}
+                  </button>
+                </div>
+              </div>
+            );
+
+          case 3:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step3Title}
+                </h2>
                 <div className="space-y-4">
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Project Name
+                      {t.videoTitle}
                     </label>
                     <input
                       type="text"
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="My Awesome Channel"
-                      className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                        isDark
-                          ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                          : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-                      }`}
+                      value={publishData.title}
+                      onChange={(e) => setPublishData({ ...publishData, title: e.target.value })}
+                      placeholder={t.videoTitlePlaceholder}
+                      className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-surface border-surface-border text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} focus:outline-none focus:ring-2 focus:ring-primary`}
                     />
                   </div>
-
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Platforms
+                      {t.hashtags}
                     </label>
-                    <div className="flex gap-2">
-                      {['tiktok', 'instagram', 'youtube'].map((platform) => (
-                        <button
-                          key={platform}
-                          onClick={() => togglePlatform(platform)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-smooth ${
-                            newProjectPlatforms.includes(platform)
-                              ? 'bg-primary text-white'
-                              : isDark
-                                ? 'bg-background-700 text-gray-400 hover:bg-background-600'
-                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                          }`}
-                        >
-                          {platform}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowCreateModal(false)}
-                      className={`flex-1 px-5 py-3 rounded-xl font-medium transition-smooth ${
-                        isDark
-                          ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                          : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                      }`}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCreateProject}
-                      disabled={!newProjectName.trim()}
-                      className="flex-1 px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
-                    >
-                      Create
-                    </button>
+                    <input
+                      type="text"
+                      value={publishData.hashtags.join(', ')}
+                      onChange={(e) => setPublishData({ ...publishData, hashtags: e.target.value.split(',').map(h => h.trim()).filter(h => h) })}
+                      placeholder={t.hashtagsPlaceholder}
+                      className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-surface border-surface-border text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} focus:outline-none focus:ring-2 focus:ring-primary`}
+                    />
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      );
-    }
+            );
 
-    function SchedulerPage() {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-
-      // Local state for draggable tasks
-      const [tasks, setTasks] = useState(scheduleData);
-
-      const moveTask = (taskId, fromColumn, toColumn) => {
-        const task = tasks[fromColumn].find(t => t.id === taskId);
-        if (!task) return;
-
-        const newTasks = { ...tasks };
-        newTasks[fromColumn] = newTasks[fromColumn].filter(t => t.id !== taskId);
-        newTasks[toColumn] = [...newTasks[toColumn], { ...task, progress: undefined }];
-        setTasks(newTasks);
-      };
-
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t.schedulerTitle}</h1>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'} mt-1`}>
-                Track and manage your content workflow
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                const title = prompt('Enter task title:');
-                if (title) {
-                  const newTask = {
-                    id: Date.now(),
-                    title,
-                    project: 'General',
-                    priority: 'medium',
-                  };
-                  setTasks({ ...tasks, todo: [...tasks.todo, newTask] });
-                }
-              }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
-            >
-              <Icons.Plus />
-              <span>{t.addNew}</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-6">
-            {[
-              { key: 'todo', title: t.todo, tasks: tasks.todo },
-              { key: 'inProgress', title: t.inProgress, tasks: tasks.inProgress },
-              { key: 'done', title: t.done, tasks: tasks.done },
-            ].map((column) => (
-              <div
-                key={column.key}
-                className={`border rounded-2xl p-4 ${
-                  isDark
-                    ? 'bg-background-800 border-surface-border'
-                    : 'bg-gray-50 border-light-border'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {column.title}
-                  </div>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                    isDark ? 'bg-background-700 text-gray-500' : 'bg-white text-gray-600 shadow-sm'
-                  }`}>
-                    {column.tasks.length}
-                  </div>
+          case 4:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step4Title}
+                </h2>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {t.privacyLevel}
+                  </label>
+                  <select
+                    value={publishData.privacy_level}
+                    onChange={(e) => setPublishData({ ...publishData, privacy_level: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-surface border-surface-border text-white' : 'bg-white border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-primary`}
+                  >
+                    <option value="">{lang === 'ru' ? 'Выберите уровень приватности' : 'Select privacy level'}</option>
+                    <option value="PUBLIC_TO_EVERYONE">{t.privacyPublic}</option>
+                    <option value="MUTUAL_FOLLOW_FRIEND">{t.privacyFriends}</option>
+                    <option value="SELF_ONLY">{t.privacyPrivate}</option>
+                  </select>
                 </div>
-                <div className="space-y-3">
-                  {column.tasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      status={column.key}
-                      onMove={(toColumn) => moveTask(task.id, column.key, toColumn)}
-                    />
+              </div>
+            );
+
+          case 5:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step5Title}
+                </h2>
+                <div className="space-y-4">
+                  {[
+                    { key: 'comment', label: t.allowComments },
+                    { key: 'duet', label: t.allowDuet },
+                    { key: 'stitch', label: t.allowStitch },
+                  ].map(({ key, label }) => (
+                    <label key={key} className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-smooth ${isDark ? 'bg-surface hover:bg-surface-hover' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                      <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={!publishData[`${key}_disabled`]}
+                        onChange={(e) => setPublishData({ ...publishData, [`${key}_disabled`]: !e.target.checked })}
+                        className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </label>
                   ))}
                 </div>
               </div>
-            ))}
+            );
+
+          case 6:
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step6Title}
+                </h2>
+                <div className={`p-4 rounded-xl ${isDark ? 'bg-surface' : 'bg-gray-100'}`}>
+                  <label className={`flex items-start gap-3 cursor-pointer`}>
+                    <input
+                      type="checkbox"
+                      checked={publishData.is_branded_content}
+                      onChange={(e) => setPublishData({ ...publishData, is_branded_content: e.target.checked, brand_content_type: [] })}
+                      className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <div className="flex-1">
+                      <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{t.brandedContent}</div>
+                      <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t.brandedContentDesc}</div>
+                    </div>
+                  </label>
+                </div>
+
+                {publishData.is_branded_content && (
+                  <div className="space-y-3">
+                    <div className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{t.brandedContentType}</div>
+                    {[
+                      { value: 'YOUR_BRAND', label: t.yourBrand },
+                      { value: 'BRANDED_CONTENT', label: 'Branded Content' },
+                    ].map(({ value, label }) => (
+                      <label key={value} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-smooth ${isDark ? 'bg-surface hover:bg-surface-hover' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                        <input
+                          type="checkbox"
+                          checked={publishData.brand_content_type.includes(value)}
+                          onChange={(e) => {
+                            const newTypes = e.target.checked
+                              ? [...publishData.brand_content_type, value]
+                              : publishData.brand_content_type.filter(t => t !== value);
+                            setPublishData({ ...publishData, brand_content_type: newTypes });
+                          }}
+                          disabled={value === 'BRANDED_CONTENT' && publishData.privacy_level === 'SELF_ONLY'}
+                          className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                        />
+                        <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{label}</span>
+                      </label>
+                    ))}
+                    {publishData.brand_content_type.includes('BRANDED_CONTENT') && publishData.privacy_level === 'SELF_ONLY' && (
+                      <div className="text-sm text-amber-500">{t.brandedContentOnlyMe}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+
+          case 7:
+            const getConsentText = () => {
+              const hasYourBrand = publishData.brand_content_type.includes('YOUR_BRAND');
+              const hasBranded = publishData.brand_content_type.includes('BRANDED_CONTENT');
+
+              if (hasYourBrand && hasBranded) return t.consentBranded;
+              if (hasBranded) return t.consentBranded;
+              if (hasYourBrand) return t.consentYourBrand;
+              return t.consentYourBrand;
+            };
+
+            return (
+              <div className="space-y-6">
+                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {t.step7Title}
+                </h2>
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-surface' : 'bg-gray-100'}`}>
+                  <label className={`flex items-start gap-3 cursor-pointer`}>
+                    <input
+                      type="checkbox"
+                      checked={publishData.consent}
+                      onChange={(e) => setPublishData({ ...publishData, consent: e.target.checked })}
+                      className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <div className="flex-1">
+                      <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{getConsentText()}</div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Summary */}
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-surface' : 'bg-gray-100'}`}>
+                  <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Summary</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className={`flex justify-between ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <span>Title:</span>
+                      <span className={isDark ? 'text-white' : 'text-gray-900'}>{publishData.title || '(empty)'}</span>
+                    </div>
+                    <div className={`flex justify-between ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <span>Privacy:</span>
+                      <span className={isDark ? 'text-white' : 'text-gray-900'}>
+                        {publishData.privacy_level === 'PUBLIC_TO_EVERYONE' ? 'Public' :
+                         publishData.privacy_level === 'MUTUAL_FOLLOW_FRIEND' ? 'Friends' :
+                         publishData.privacy_level === 'SELF_ONLY' ? 'Only Me' : '(not set)'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+
+          case 8:
+            return (
+              <div className="space-y-6 text-center">
+                {isPublishing ? (
+                  <>
+                    <div className="text-6xl">⏳</div>
+                    <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t.statusUploading}
+                    </h2>
+                  </>
+                ) : publishResult?.success ? (
+                  <>
+                    <div className="text-6xl">✅</div>
+                    <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t.statusPublished}
+                    </h2>
+                    <a
+                      href={publishResult.data?.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                    >
+                      {t.viewOnTikTok}
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl">❌</div>
+                    <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {t.statusFailed}
+                    </h2>
+                    <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {publishResult?.error}
+                    </div>
+                    <button
+                      onClick={() => setCurrentStep(1)}
+                      className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                    >
+                      {t.tryAgain}
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+
+          default:
+            return null;
+        }
+      };
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-2xl rounded-2xl shadow-xl ${isDark ? 'bg-background-800' : 'bg-white'} animate-slide-up`}>
+            {/* Header */}
+            <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t.publishFlowTitle}
+              </h2>
+              <button
+                onClick={onClose}
+                className={`p-2 rounded-lg transition-smooth ${isDark ? 'hover:bg-surface text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            {/* Progress Steps */}
+            {currentStep < 8 && (
+              <div className={`px-6 py-4 border-b ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  {[1, 2, 3, 4, 5, 6, 7].map((step) => (
+                    <React.Fragment key={step}>
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                        step === currentStep
+                          ? 'bg-primary text-white'
+                          : step < currentStep
+                            ? 'bg-green-500 text-white'
+                            : isDark
+                              ? 'bg-surface text-gray-500'
+                              : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {step < currentStep ? <Icons.Check /> : step}
+                      </div>
+                      {step < 7 && (
+                        <div className={`flex-1 h-0.5 mx-2 ${
+                          step < currentStep ? 'bg-green-500' : isDark ? 'bg-surface' : 'bg-gray-200'
+                        }`} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="p-6">
+              {renderStep()}
+            </div>
+
+            {/* Footer */}
+            {currentStep < 8 && (
+              <div className={`flex items-center justify-between p-6 border-t ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+                <button
+                  onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                  disabled={currentStep === 1}
+                  className={`px-6 py-3 rounded-xl font-medium transition-smooth ${
+                    currentStep === 1
+                      ? 'opacity-50 cursor-not-allowed'
+                      : isDark
+                        ? 'bg-surface hover:bg-surface-hover text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Icons.ChevronLeft />
+                  {t.back}
+                </button>
+
+                {currentStep < 7 ? (
+                  <button
+                    onClick={() => setCurrentStep(currentStep + 1)}
+                    disabled={!canProceed()}
+                    className={`px-6 py-3 rounded-xl font-medium transition-smooth flex items-center gap-2 ${
+                      canProceed()
+                        ? 'bg-primary text-white hover:bg-primary-600'
+                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {t.next}
+                    <Icons.ChevronRight />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePublish}
+                    disabled={!canProceed() || isPublishing}
+                    className={`px-6 py-3 rounded-xl font-medium transition-smooth ${
+                      canProceed() && !isPublishing
+                        ? 'bg-primary text-white hover:bg-primary-600'
+                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {t.publish}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       );
     }
 
-    // ====== TRANSLATION HOOK ======
-    const TranslationContext = React.createContext();
+    // Content Library Page
+    function ContentLibraryPage({ onPublish }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
+      const [videos, setVideos] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [showUploadModal, setShowUploadModal] = useState(false);
 
-    function useTranslations() {
-      const context = React.useContext(TranslationContext);
-      return context;
-    }
+      useEffect(() => {
+        loadVideos();
+      }, []);
 
-    // ====== MODAL COMPONENTS ======
-    function AuthModal({ isOpen, onClose, onSuccess }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const [code, setCode] = useState('');
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState('');
-      const [platform, setPlatform] = useState('tiktok'); // 'tiktok' or 'youtube'
-
-      // Проверяем sessionStorage при открытии модального окна
-      React.useEffect(() => {
-        if (!isOpen) return;
-
-        console.log('[Auth] Checking sessionStorage for OAuth callback...');
-        const checkStorage = () => {
-          const oauthData = sessionStorage.getItem('oauth_callback');
-          if (oauthData) {
-            try {
-              const data = JSON.parse(oauthData);
-              console.log('[Auth] Found OAuth data in storage:', data);
-
-              // Проверяем, что данные не старые (5 минут)
-              if (Date.now() - data.timestamp < 5 * 60 * 1000) {
-                console.log('[Auth] Processing OAuth code from storage...');
-                sessionStorage.removeItem('oauth_callback'); // Удаляем после использования
-                handleExchange(data.code);
-              } else {
-                console.log('[Auth] OAuth data expired, removing...');
-                sessionStorage.removeItem('oauth_callback');
-              }
-            } catch (e) {
-              console.error('[Auth] Failed to parse OAuth data:', e);
-              sessionStorage.removeItem('oauth_callback');
-            }
-          }
-        };
-
-        // Проверяем сразу
-        checkStorage();
-
-        // И проверяем периодически (на случай если popup перезагрузит страницу)
-        const interval = setInterval(checkStorage, 1000);
-
-        // Также слушаем postMessage для обратной совместимости
-        const messageHandler = async (event) => {
-          console.log('[Auth] Received message:', event.data);
-          if (event.data.type === 'oauth_code') {
-            console.log('[Auth] Got OAuth code via postMessage:', event.data.code?.substring(0, 20) + '...');
-            clearInterval(interval);
-            setCode(event.data.code);
-            await handleExchange(event.data.code);
-          }
-        };
-        window.addEventListener('message', messageHandler);
-
-        return () => {
-          clearInterval(interval);
-          window.removeEventListener('message', messageHandler);
-        };
-      }, [isOpen]);
-
-      if (!isOpen) return null;
-
-      const handleAuth = () => {
-        console.log('[Auth] Starting OAuth flow for:', platform);
-        const result = openPlatformAuth(platform);
-        console.log('[Auth] Popup opened:', result);
-      };
-
-      const handleExchange = async (authCode) => {
-        setLoading(true);
-        setError('');
+      const loadVideos = async () => {
         try {
-          const result = await exchangePlatformCode(platform, authCode);
-          if (result.ok) {
-            // Сохраняем session ID
-            if (result.sid) {
-              saveSessionId(result.sid);
-            }
-            onSuccess(result.profile);
-            onClose();
-          } else {
-            setError(result.profile_error?.body || 'Auth failed');
-          }
-        } catch (e) {
-          setError(e.message);
+          const response = await apiRequest('/api/videos');
+          setVideos(response.videos || []);
+        } catch (error) {
+          console.error('Failed to load videos:', error);
         } finally {
           setLoading(false);
         }
       };
 
-      const handleManualCode = async () => {
-        if (!code.trim()) return;
-        await handleExchange(code.trim());
+      const handleUploadSuccess = (newVideo) => {
+        setVideos([newVideo, ...videos]);
+        setShowUploadModal(false);
       };
 
-      return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up`}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                Connect Account
-              </h2>
-              <button onClick={onClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
-                ✕
-              </button>
-            </div>
+      const handlePublishClick = (video) => {
+        onPublish(video);
+      };
 
-            <div className="space-y-4">
-              {/* Platform selector */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPlatform('tiktok')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                    platform === 'tiktok'
-                      ? 'bg-black text-white'
-                      : isDark ? 'bg-background-700 text-gray-400 hover:bg-background-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-                >
-                  <Icons.TikTok />
-                  <span>TikTok</span>
-                </button>
-                <button
-                  onClick={() => setPlatform('youtube')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-smooth ${
-                    platform === 'youtube'
-                      ? 'bg-red-600 text-white'
-                      : isDark ? 'bg-background-700 text-gray-400 hover:bg-background-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-                >
-                  <Icons.YouTube />
-                  <span>YouTube</span>
-                </button>
-              </div>
-
-              <button
-                onClick={handleAuth}
-                disabled={loading}
-                className={`w-full flex items-center justify-center gap-3 px-5 py-3 rounded-xl text-white font-medium transition-smooth disabled:opacity-50 ${
-                  platform === 'tiktok' ? 'bg-black hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                {platform === 'tiktok' ? <Icons.TikTok /> : <Icons.YouTube />}
-                <span>{loading ? 'Loading...' : `Connect with ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}`}</span>
-              </button>
-
-              <div className={`text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                or paste authorization code
-              </div>
-
-              <textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder={`Paste authorization code from ${platform === 'tiktok' ? 'TikTok' : 'YouTube'}...`}
-                className={`w-full px-4 py-3 rounded-xl text-sm resize-none transition-smooth focus:outline-none focus:border-primary ${
-                  isDark
-                    ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                    : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-                }`}
-                rows={3}
-              />
-
-              <button
-                onClick={handleManualCode}
-                disabled={loading || !code.trim()}
-                className="w-full px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
-              >
-                Connect with Code
-              </button>
-
-              {error && (
-                <div className={`p-3 rounded-xl text-sm break-words ${isDark ? 'bg-error/10 text-error' : 'bg-red-50 text-red-600'}`}>
-                  {error}
-                </div>
-              )}
-
-              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                <strong>Note:</strong> You need to set your{' '}
-                {platform === 'tiktok' ? 'TikTok Client Key' : 'Google Client ID'} in the code.
-              </div>
-            </div>
+      if (loading) {
+        return (
+          <div className="flex items-center justify-center h-96">
+            <div className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Loading...</div>
           </div>
+        );
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t.libraryTitle}
+              </h1>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                {videos.length} {videos.length === 1 ? 'video' : 'videos'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+            >
+              <Icons.Plus />
+              {t.uploadVideo}
+            </button>
+          </div>
+
+          {videos.length === 0 ? (
+            <div className={`flex flex-col items-center justify-center h-96 rounded-2xl border-2 border-dashed ${isDark ? 'border-surface-border' : 'border-gray-300'}`}>
+              <div className="text-6xl mb-4">📹</div>
+              <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t.libraryEmpty}
+              </h3>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                {t.libraryEmptyDesc}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videos.map((video) => (
+                <div
+                  key={video.id}
+                  className={`rounded-2xl border overflow-hidden transition-smooth hover:shadow-lg ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-gray-200'}`}
+                >
+                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center relative" style={{ height: '300px', width: '100%' }}>
+                    {video.local_preview_url ? (
+                      <video
+                        src={video.local_preview_url}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        muted
+                        onLoadedData={(e) => {
+                          e.target.currentTime = 1; // Show frame at 1 second
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center p-4">
+                        <Icons.Upload />
+                        <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          No preview
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className={`font-semibold mb-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {video.name}
+                    </h3>
+                    <div className={`text-sm mb-4 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                      {video.status === 'published' ? 'Published' : t.notPublished}
+                    </div>
+                    <button
+                      onClick={() => handlePublishClick(video)}
+                      className="w-full py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                    >
+                      {t.publishToTikTok}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Upload Modal */}
+          {showUploadModal && (
+            <UploadModal
+              isOpen={showUploadModal}
+              onClose={() => setShowUploadModal(false)}
+              onUploadSuccess={handleUploadSuccess}
+            />
+          )}
         </div>
       );
     }
 
-    // Legacy TikTok-only modal
-    function TikTokAuthModal({ isOpen, onClose, onSuccess }) {
-      return <AuthModal isOpen={isOpen} onClose={onClose} onSuccess={onSuccess} />;
-    }
-
-    function UploadModal({ isOpen, onClose, projectId, onUploadSuccess }) {
-      const { lang } = React.useContext(TranslationContext);
-      const t = translations[lang];
-      const { isDark } = React.useContext(ThemeContext);
-      const [step, setStep] = useState(1); // 1: Video, 2: Details, 3: Schedule, 4: Review
+    // Upload Modal
+    function UploadModal({ isOpen, onClose, onUploadSuccess }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
       const [file, setFile] = useState(null);
-      const [videoPreview, setVideoPreview] = useState(null);
+      const [previewUrl, setPreviewUrl] = useState(null);
+      const [uploading, setUploading] = useState(false);
+      const fileInputRef = React.useRef(null);
 
-      // Thumbnail
-      const [thumbnail, setThumbnail] = useState(null);
-      const [thumbnailPreview, setThumbnailPreview] = useState(null);
-
-      // Video details
-      const [title, setTitle] = useState('');
-      const [description, setDescription] = useState('');
-      const [hashtags, setHashtags] = useState('');
-      const [privacy, setPrivacy] = useState('public'); // 'public', 'unlisted', 'private'
-
-      // Platforms
-      const [selectedPlatforms, setSelectedPlatforms] = useState([]);
-      const [profiles, setProfiles] = useState({});
-
-      // Schedule
-      const [scheduleType, setScheduleType] = useState('now'); // 'now' or 'later'
-      const [scheduleDate, setScheduleDate] = useState('');
-      const [scheduleTime, setScheduleTime] = useState('');
-
-      // Upload state
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState('');
-      const [result, setResult] = useState(null);
-
-      // Load profiles on mount and when window regains focus
+      // Reset state when modal closes
       React.useEffect(() => {
-        const loadProfiles = async () => {
-          try {
-            const data = await apiRequest('/api/me');
-            setProfiles(data.profiles || {});
-          } catch (e) {
-            console.log('Not logged in');
-          }
-        };
-        loadProfiles();
-
-        // Reload profiles when window regains focus (after OAuth redirect)
-        const handleFocus = () => loadProfiles();
-        window.addEventListener('focus', handleFocus);
-
-        return () => {
-          window.removeEventListener('focus', handleFocus);
-        };
-      }, []);
-
-      if (!isOpen) return null;
+        if (!isOpen) {
+          setFile(null);
+          setPreviewUrl(null);
+        }
+      }, [isOpen]);
 
       const handleFileChange = (e) => {
-        const selected = e.target.files?.[0];
-        if (selected && selected.type.startsWith('video/')) {
-          setFile(selected);
-          setError('');
-
-          // Create video preview
-          const url = URL.createObjectURL(selected);
-          setVideoPreview(url);
-
-          // Auto-fill title from filename
-          setTitle(selected.name.replace(/\.[^/.]+$/, ''));
-        } else {
-          setError('Please select a valid video file (MP4, MOV, WebM)');
+        const selectedFile = e.target.files[0];
+        if (selectedFile && selectedFile.type.startsWith('video/')) {
+          setFile(selectedFile);
+          // Create local preview URL immediately
+          const url = URL.createObjectURL(selectedFile);
+          setPreviewUrl(url);
         }
       };
 
-      const handleThumbnailChange = (e) => {
-        const selected = e.target.files?.[0];
-        if (selected && selected.type.startsWith('image/')) {
-          setThumbnail(selected);
-          setError('');
-
-          // Create thumbnail preview
-          const url = URL.createObjectURL(selected);
-          setThumbnailPreview(url);
-        } else {
-          setError('Please select a valid image file (JPG, PNG)');
-        }
-      };
-
-      const togglePlatform = (platform) => {
-        setSelectedPlatforms(prev =>
-          prev.includes(platform)
-            ? prev.filter(p => p !== platform)
-            : [...prev, platform]
-        );
-      };
-
-      const validateStep = () => {
-        if (step === 1) {
-          if (!file) {
-            setError('Please select a video file');
-            return false;
-          }
-        }
-        if (step === 2) {
-          if (!title.trim()) {
-            setError('Please enter a video title');
-            return false;
-          }
-          if (selectedPlatforms.length === 0) {
-            setError('Please select at least one platform');
-            return false;
-          }
-        }
-        if (step === 3) {
-          if (scheduleType === 'later' && (!scheduleDate || !scheduleTime)) {
-            setError('Please select date and time for scheduled upload');
-            return false;
-          }
-        }
-        setError('');
-        return true;
-      };
-
-      const handleNext = () => {
-        if (validateStep()) {
-          setStep(prev => prev + 1);
-        }
-      };
-
-      const handleBack = () => {
-        setStep(prev => prev - 1);
-        setError('');
+      const handleButtonClick = () => {
+        fileInputRef.current?.click();
       };
 
       const handleUpload = async () => {
-        if (!file || !validateStep()) return;
+        if (!file) return;
 
-        setLoading(true);
-        setError('');
+        setUploading(true);
         try {
-          console.log('[Upload] Starting upload for:', file.name);
-          console.log('[Upload] Selected platforms:', selectedPlatforms);
+          const formData = new FormData();
+          formData.append('file', file);
 
-          // Определяем платформу для загрузки (первая из выбранных)
-          const targetPlatform = selectedPlatforms[0] || 'tiktok';
-          console.log('[Upload] Uploading to:', targetPlatform);
-
-          // Upload video with timeout
-          const uploadPromise = uploadVideo(file, targetPlatform);
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Upload timeout - please try again')), 60000)
-          );
-
-          const res = await Promise.race([uploadPromise, timeoutPromise]);
-          console.log('[Upload] Response:', res);
-
-          if (res && res.publish_id) {
-            // Calculate scheduled time
-            let scheduledFor = null;
-            if (scheduleType === 'later' && scheduleDate && scheduleTime) {
-              scheduledFor = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
-            }
-
-            // Save video data (optional - may fail if backend doesn't have this endpoint)
-            try {
-              await apiRequest('/api/videos', {
-                method: 'POST',
-                body: JSON.stringify({
-                  projectId,
-                  videoName: file.name,
-                  publishId: res.publish_id,
-                  title,
-                  description,
-                  hashtags: hashtags.split(',').map(h => h.trim()).filter(h => h),
-                  platforms: selectedPlatforms,
-                  privacy,
-                  scheduledFor,
-                  status: scheduledFor ? 'scheduled' : 'uploaded',
-                }),
-              });
-            } catch (saveError) {
-              console.warn('[Upload] Failed to save video data:', saveError);
-              // Continue anyway - upload was successful
-            }
-
-            setResult({
-              ...res,
-              title,
-              platforms: selectedPlatforms,
-              privacy,
-              scheduledFor,
-            });
-
-            // Notify parent component of successful upload
-            if (onUploadSuccess) {
-              onUploadSuccess({
-                platform: selectedPlatforms[0] || 'TikTok',
-                videoName: title || file.name
-              });
-            }
-
-            // Auto-close after 3 seconds
-            setTimeout(() => {
-              handleClose();
-              onClose();
-            }, 3000);
-          } else {
-            throw new Error('Invalid upload response - no publish_id');
-          }
-        } catch (e) {
-          console.error('[Upload] Error:', e);
-
-          // Parse TikTok API errors
-          let errorMessage = e.message || 'Upload failed. Please try again.';
-
-          // Check for specific TikTok errors
-          if (e.message?.includes('spam_risk_too_many_pending_share')) {
-            errorMessage = lang === 'ru'
-              ? 'TikTok ограничил загрузку: слишком много видео ожидают публикации. Опубликуйте или удалите старые видео и попробуйте снова.'
-              : 'TikTok upload limit reached: Too many videos pending publication. Please publish or delete old videos and try again.';
-          } else if (e.message?.includes('spam_risk')) {
-            errorMessage = lang === 'ru'
-              ? 'TikTok пометил как спам. Подождите немного перед следующей загрузкой.'
-              : 'TikTok flagged as spam. Please wait a bit before uploading again.';
-          } else if (e.message?.includes('401') || e.message?.includes('Unauthorized')) {
-            errorMessage = lang === 'ru'
-              ? 'Ошибка авторизации. Переподключите аккаунт TikTok в настройках.'
-              : 'Authorization error. Please reconnect your TikTok account in settings.';
+          const sid = getSessionId();
+          const headers = {};
+          if (sid) {
+            headers['Authorization'] = `Bearer ${sid}`;
           }
 
-          setError(errorMessage);
+          const response = await fetch(`${CONFIG.API_BASE}/api/tiktok/upload`, {
+            method: 'POST',
+            headers,
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+
+          const data = await response.json();
+          onUploadSuccess({
+            id: Date.now(),
+            name: file.name,
+            status: 'uploaded',
+            ref: data.publish_id,
+            local_preview_url: previewUrl, // Локальный preview URL
+          });
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Upload failed: ' + error.message);
+        } finally {
+          setUploading(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md rounded-2xl shadow-xl ${isDark ? 'bg-background-800' : 'bg-white'}`}>
+            <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t.uploadVideo}
+              </h2>
+              <button
+                onClick={onClose}
+                className={`p-2 rounded-lg transition-smooth ${isDark ? 'hover:bg-surface text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Preview */}
+              {previewUrl && (
+                <div className="flex justify-center">
+                  <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'}`} style={{ height: '200px', width: '112px' }}>
+                    <video
+                      src={previewUrl}
+                      className="h-full w-full object-contain"
+                      muted
+                      onLoadedData={(e) => {
+                        e.target.currentTime = 1;
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Upload area */}
+              <div className={`border-2 border-dashed rounded-xl p-8 text-center ${isDark ? 'border-surface-border' : 'border-gray-300'}`}>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="video-upload"
+                  ref={fileInputRef}
+                />
+                <div
+                  onClick={handleButtonClick}
+                  className="cursor-pointer flex flex-col items-center gap-3"
+                >
+                  <Icons.Upload />
+                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {file ? file.name : 'Click to select a video file'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`flex gap-3 p-6 border-t ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+              <button
+                onClick={onClose}
+                className={`flex-1 px-6 py-3 rounded-xl font-medium transition-smooth ${isDark ? 'bg-surface hover:bg-surface-hover text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!file || uploading}
+                className={`flex-1 px-6 py-3 rounded-xl font-medium transition-smooth ${
+                  file && !uploading
+                    ? 'bg-primary text-white hover:bg-primary-600'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {uploading ? 'Uploading...' : t.uploadVideo}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Settings Page
+    function SettingsPage({ profiles, onConnectAccount, onLogout }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
+
+      return (
+        <div className="space-y-6">
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {t.navSettings}
+          </h1>
+
+          <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-gray-200'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Connected Accounts
+            </h2>
+
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-background-800' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {profiles.tiktok?.avatar_url ? (
+                    <img
+                      src={profiles.tiktok.avatar_url}
+                      alt={profiles.tiktok.display_name}
+                      className="w-12 h-12 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center">
+                      <Icons.TikTok />
+                    </div>
+                  )}
+                  <div>
+                    {profiles.tiktok ? (
+                      <>
+                        <div className={`text-base font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {profiles.tiktok.display_name}
+                        </div>
+                        <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                          {profiles.tiktok.followers_count
+                            ? `${profiles.tiktok.followers_count?.toLocaleString()} followers`
+                            : (profiles.tiktok.handle || t.connected)
+                          }
+                        </div>
+                      </>
+                    ) : (
+                      <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {t.notConnected}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {profiles.tiktok ? (
+                    <>
+                      <button
+                        onClick={onConnectAccount}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      >
+                        {t.reconnect}
+                      </button>
+                      <button
+                        onClick={() => onLogout('tiktok')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-100 text-red-700 hover:bg-red-200`}
+                      >
+                        {t.disconnect}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={onConnectAccount}
+                      className="px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-black text-white hover:bg-gray-800"
+                    >
+                      {t.connectTikTok}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Auth Modal
+    function AuthModal({ isOpen, onClose, onSuccess }) {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
+      const [code, setCode] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      useEffect(() => {
+        if (isOpen) {
+          // Listen for OAuth callback
+          const handleOAuthCallback = (event) => {
+            if (event.data.type === 'oauth_code') {
+              handleCodeExchange(event.data.code);
+            }
+          };
+          window.addEventListener('message', handleOAuthCallback);
+          return () => window.removeEventListener('message', handleOAuthCallback);
+        }
+      }, [isOpen]);
+
+      const handleOpenAuth = () => {
+        openTikTokAuth();
+      };
+
+      const handleCodeExchange = async (authCode) => {
+        setLoading(true);
+        try {
+          const result = await exchangeTikTokCode(authCode);
+          if (result.ok) {
+            onSuccess(result.profile);
+            onClose();
+          }
+        } catch (error) {
+          console.error('Auth error:', error);
+          alert('Authentication failed: ' + error.message);
         } finally {
           setLoading(false);
         }
       };
 
-      const handleClose = () => {
-        setStep(1);
-        setFile(null);
-        setVideoPreview(null);
-        setThumbnail(null);
-        setThumbnailPreview(null);
-        setTitle('');
-        setDescription('');
-        setHashtags('');
-        setPrivacy('public');
-        setSelectedPlatforms([]);
-        setScheduleType('now');
-        setScheduleDate('');
-        setScheduleTime('');
-        setError('');
-        setResult(null);
-        onClose();
+      const handleManualSubmit = async () => {
+        if (!code.trim()) return;
+        await handleCodeExchange(code.trim());
       };
 
-      const renderStep1 = () => (
-        <div className="space-y-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            Step 1: Select Video
-          </h3>
+      if (!isOpen) return null;
 
-          {!file ? (
-            <label className={`block border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-smooth ${
-              isDark
-                ? 'border-surface-border hover:border-gray-600 hover:bg-background-900'
-                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-            }`}>
-              <div className="text-6xl mb-4">📹</div>
-              <div className={`text-lg font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Drop your video here or click to browse
-              </div>
-              <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                MP4, MOV, WebM supported • Max 500MB
-              </div>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-          ) : (
-            <div className="space-y-3">
-              <div className={`p-4 rounded-xl ${isDark ? 'bg-background-900' : 'bg-gray-50'}`}>
-                <div className={`text-sm font-medium truncate mb-1 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                  {file.name}
-                </div>
-                <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
-                </div>
-              </div>
-
-              {videoPreview && (
-                <video
-                  src={videoPreview}
-                  controls
-                  className="w-full rounded-xl"
-                  style={{ maxHeight: '300px' }}
-                />
-              )}
-
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md rounded-2xl shadow-xl ${isDark ? 'bg-background-800' : 'bg-white'}`}>
+            <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t.connectTikTok}
+              </h2>
               <button
-                onClick={() => {
-                  setFile(null);
-                  setVideoPreview(null);
-                }}
-                className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-smooth ${
-                  isDark
-                    ? 'bg-error/10 text-error hover:bg-error/20'
-                    : 'bg-red-50 text-red-600 hover:bg-red-100'
-                }`}
+                onClick={onClose}
+                className={`p-2 rounded-lg transition-smooth ${isDark ? 'hover:bg-surface text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
               >
-                Remove Video
+                <Icons.X />
               </button>
             </div>
-          )}
-        </div>
-      );
 
-      const renderStep2 = () => (
-        <div className="space-y-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            Step 2: Video Details
-          </h3>
-
-          {/* Title */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Title <span className="text-error">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter video title..."
-              maxLength={100}
-              className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                isDark
-                  ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                  : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-              } border`}
-            />
-            <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              {title.length}/100 characters
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your video..."
-              rows={4}
-              maxLength={1000}
-              className={`w-full px-4 py-3 rounded-xl text-sm resize-none transition-smooth focus:outline-none focus:border-primary ${
-                isDark
-                  ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                  : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-              } border`}
-            />
-            <div className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              {description.length}/1000 characters
-            </div>
-          </div>
-
-          {/* Hashtags */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Hashtags
-            </label>
-            <input
-              type="text"
-              value={hashtags}
-              onChange={(e) => setHashtags(e.target.value)}
-              placeholder="funny, viral, trending (comma separated)"
-              className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                isDark
-                  ? 'bg-background-900 border-surface-border text-gray-200 placeholder-gray-500'
-                  : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'
-              } border`}
-            />
-          </div>
-
-          {/* Privacy */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Privacy <span className="text-error">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="p-6 space-y-4">
               <button
-                onClick={() => setPrivacy('public')}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-smooth ${
-                  privacy === 'public'
-                    ? 'bg-primary text-white'
-                    : isDark
-                    ? 'bg-background-900 text-gray-300 hover:bg-background-800 border border-surface-border'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                <div className="text-xl mb-1">🌍</div>
-                <div>Public</div>
-                <div className={`text-xs mt-1 ${privacy === 'public' ? 'opacity-80' : 'opacity-60'}`}>
-                  Everyone can see
-                </div>
-              </button>
-
-              <button
-                onClick={() => setPrivacy('unlisted')}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-smooth ${
-                  privacy === 'unlisted'
-                    ? 'bg-primary text-white'
-                    : isDark
-                    ? 'bg-background-900 text-gray-300 hover:bg-background-800 border border-surface-border'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                <div className="text-xl mb-1">🔗</div>
-                <div>Unlisted</div>
-                <div className={`text-xs mt-1 ${privacy === 'unlisted' ? 'opacity-80' : 'opacity-60'}`}>
-                  Only with link
-                </div>
-              </button>
-
-              <button
-                onClick={() => setPrivacy('private')}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-smooth ${
-                  privacy === 'private'
-                    ? 'bg-primary text-white'
-                    : isDark
-                    ? 'bg-background-900 text-gray-300 hover:bg-background-800 border border-surface-border'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200'
-                }`}
-              >
-                <div className="text-xl mb-1">🔒</div>
-                <div>Private</div>
-                <div className={`text-xs mt-1 ${privacy === 'private' ? 'opacity-80' : 'opacity-60'}`}>
-                  Only you
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Thumbnail */}
-          {selectedPlatforms.includes('youtube') && (
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Thumbnail (YouTube) <span className="text-xs text-gray-500 font-normal">- Optional</span>
-              </label>
-              {!thumbnail ? (
-                <label className={`block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-smooth ${
-                  isDark
-                    ? 'border-surface-border hover:border-gray-600 hover:bg-background-900'
-                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                }`}>
-                  <div className="text-3xl mb-2">🖼️</div>
-                  <div className={`text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Upload custom thumbnail
-                  </div>
-                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    JPG or PNG • Min 1280x720 • Recommended 16:9
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={handleThumbnailChange}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <div className="space-y-3">
-                  <div className={`p-3 rounded-xl ${isDark ? 'bg-background-900' : 'bg-gray-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={thumbnailPreview}
-                        alt="Thumbnail preview"
-                        className="w-24 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-medium truncate ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                          {thumbnail.name}
-                        </div>
-                        <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                          {(thumbnail.size / 1024).toFixed(1)} KB
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setThumbnail(null);
-                          setThumbnailPreview(null);
-                        }}
-                        className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-800 text-gray-400' : 'hover:bg-gray-200 text-gray-600'}`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Platforms */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Platforms <span className="text-error">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* TikTok */}
-              <button
-                onClick={() => togglePlatform('tiktok')}
-                disabled={!profiles.tiktok || profiles.tiktok?.__error}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
-                  selectedPlatforms.includes('tiktok')
-                    ? 'bg-black text-white'
-                    : profiles.tiktok && !profiles.tiktok?.__error
-                    ? isDark
-                      ? 'bg-background-900 border-2 border-transparent hover:border-gray-600'
-                      : 'bg-gray-100 border-2 border-transparent hover:border-gray-300'
-                    : 'opacity-50 cursor-not-allowed'
-                } ${isDark ? 'text-gray-200' : 'text-gray-900'}`}
+                onClick={handleOpenAuth}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-smooth"
               >
                 <Icons.TikTok />
-                <div className="text-left">
-                  <div className="text-sm font-medium">TikTok</div>
-                  <div className="text-xs opacity-70">
-                    {profiles.tiktok ? 'Connected' : 'Not connected'}
-                  </div>
-                </div>
-                {selectedPlatforms.includes('tiktok') && (
-                  <div className="ml-auto">
-                    <Icons.Check />
-                  </div>
-                )}
+                Connect with TikTok
               </button>
 
-              {/* YouTube */}
-              <button
-                onClick={() => togglePlatform('youtube')}
-                disabled={!profiles.youtube || profiles.youtube?.__error}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth ${
-                  selectedPlatforms.includes('youtube')
-                    ? 'bg-red-600 text-white'
-                    : profiles.youtube && !profiles.youtube?.__error
-                    ? isDark
-                      ? 'bg-background-900 border-2 border-transparent hover:border-gray-600'
-                      : 'bg-gray-100 border-2 border-transparent hover:border-gray-300'
-                    : 'opacity-50 cursor-not-allowed'
-                } ${isDark ? 'text-gray-200' : 'text-gray-900'}`}
-              >
-                <Icons.YouTube />
-                <div className="text-left">
-                  <div className="text-sm font-medium">YouTube</div>
-                  <div className="text-xs opacity-70">
-                    {profiles.youtube ? 'Connected' : 'Not connected'}
-                  </div>
-                </div>
-                {selectedPlatforms.includes('youtube') && (
-                  <div className="ml-auto">
-                    <Icons.Check />
-                  </div>
-                )}
-              </button>
-            </div>
+              <div className={`text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                or paste authorization code manually:
+              </div>
 
-            {!profiles.tiktok && !profiles.youtube && (
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Paste authorization code from TikTok..."
+                className={`w-full px-4 py-3 rounded-xl border ${isDark ? 'bg-surface border-surface-border text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} focus:outline-none focus:ring-2 focus:ring-primary`}
+              />
+
               <button
-                onClick={() => {/* TODO: Open connect modal */}}
-                className={`w-full mt-3 px-4 py-2 rounded-lg text-sm font-medium ${
-                  isDark
+                onClick={handleManualSubmit}
+                disabled={!code.trim() || loading}
+                className={`w-full px-6 py-3 rounded-xl font-medium transition-smooth ${
+                  code.trim() && !loading
                     ? 'bg-primary text-white hover:bg-primary-600'
-                    : 'bg-primary text-white hover:bg-primary-600'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Connect a Platform First
+                {loading ? 'Connecting...' : 'Connect'}
               </button>
-            )}
-          </div>
-        </div>
-      );
-
-      const renderStep3 = () => (
-        <div className="space-y-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            Step 3: Schedule Upload
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setScheduleType('now')}
-              className={`px-4 py-4 rounded-xl transition-smooth ${
-                scheduleType === 'now'
-                  ? 'bg-primary text-white'
-                  : isDark
-                  ? 'bg-background-900 text-gray-300 hover:bg-background-800'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-              }`}
-            >
-              <div className="text-2xl mb-2">⚡</div>
-              <div className="text-sm font-medium">Upload Now</div>
-              <div className={`text-xs mt-1 ${scheduleType === 'now' ? 'opacity-80' : 'opacity-60'}`}>
-                Publish immediately
-              </div>
-            </button>
-
-            <button
-              onClick={() => setScheduleType('later')}
-              className={`px-4 py-4 rounded-xl transition-smooth ${
-                scheduleType === 'later'
-                  ? 'bg-primary text-white'
-                  : isDark
-                  ? 'bg-background-900 text-gray-300 hover:bg-background-800'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-              }`}
-            >
-              <div className="text-2xl mb-2">📅</div>
-              <div className="text-sm font-medium">Schedule</div>
-              <div className={`text-xs mt-1 ${scheduleType === 'later' ? 'opacity-80' : 'opacity-60'}`}>
-                Publish later
-              </div>
-            </button>
-          </div>
-
-          {scheduleType === 'later' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={scheduleDate}
-                  onChange={(e) => setScheduleDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                    isDark
-                      ? 'bg-background-900 border-surface-border text-gray-200'
-                      : 'bg-gray-100 border-gray-200 text-gray-900'
-                  } border`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={scheduleTime}
-                  onChange={(e) => setScheduleTime(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl text-sm transition-smooth focus:outline-none focus:border-primary ${
-                    isDark
-                      ? 'bg-background-900 border-surface-border text-gray-200'
-                      : 'bg-gray-100 border-gray-200 text-gray-900'
-                  } border`}
-                />
-              </div>
-            </div>
-          )}
-
-          {scheduleType === 'later' && scheduleDate && scheduleTime && (
-            <div className={`p-3 rounded-xl text-sm ${isDark ? 'bg-background-900' : 'bg-gray-100'}`}>
-              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                Video will be published on:
-              </span>
-              <span className={`ml-2 font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString()}
-              </span>
-            </div>
-          )}
-        </div>
-      );
-
-      const renderStep4 = () => (
-        <div className="space-y-4">
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            Step 4: Review & Upload
-          </h3>
-
-          <div className={`p-4 rounded-xl space-y-3 ${isDark ? 'bg-background-900' : 'bg-gray-100'}`}>
-            {/* Video */}
-            <div>
-              <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                VIDEO
-              </div>
-              <div className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                {file?.name}
-              </div>
-            </div>
-
-            {/* Thumbnail */}
-            {thumbnail && selectedPlatforms.includes('youtube') && (
-              <div>
-                <div className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  THUMBNAIL
-                </div>
-                <img
-                  src={thumbnailPreview}
-                  alt="Thumbnail preview"
-                  className="w-full max-w-xs rounded-lg border-2 border-transparent"
-                />
-              </div>
-            )}
-
-            {/* Title */}
-            <div>
-              <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                TITLE
-              </div>
-              <div className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                {title}
-              </div>
-            </div>
-
-            {/* Platforms */}
-            <div>
-              <div className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                PLATFORMS
-              </div>
-              <div className="flex gap-2">
-                {selectedPlatforms.includes('tiktok') && (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-black text-white text-sm">
-                    <Icons.TikTok /> TikTok
-                  </div>
-                )}
-                {selectedPlatforms.includes('youtube') && (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-red-600 text-white text-sm">
-                    <Icons.YouTube /> YouTube
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Schedule */}
-            <div>
-              <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                SCHEDULE
-              </div>
-              <div className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                {scheduleType === 'now' ? (
-                  <span className="text-success">⚡ Upload Now</span>
-                ) : (
-                  <span>📅 {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString()}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Hashtags */}
-            {hashtags && (
-              <div>
-                <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  HASHTAGS
-                </div>
-                <div className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
-                  {hashtags}
-                </div>
-              </div>
-            )}
-
-            {/* Privacy */}
-            <div>
-              <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                PRIVACY
-              </div>
-              <div className="flex items-center gap-2">
-                {privacy === 'public' && (
-                  <span className="text-success">
-                    🌍 Public - Everyone can see
-                  </span>
-                )}
-                {privacy === 'unlisted' && (
-                  <span className="text-warning">
-                    🔗 Unlisted - Only with link
-                  </span>
-                )}
-                {privacy === 'private' && (
-                  <span className="text-error">
-                    🔒 Private - Only you
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {result && (
-            <div className={`p-4 rounded-xl ${isDark ? 'bg-success/10' : 'bg-green-50'}`}>
-              <div className="flex items-start gap-3">
-                <div className="text-success text-xl">✓</div>
-                <div>
-                  <div className={`font-medium ${isDark ? 'text-success' : 'text-green-700'}`}>
-                    Video Uploaded Successfully!
-                  </div>
-                  <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Publish ID: {result.publish_id}
-                  </div>
-                  {result.scheduledFor && (
-                    <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Scheduled for: {new Date(result.scheduledFor).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-
-      return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
-          <div className={`w-full max-w-2xl rounded-2xl p-6 ${isDark ? 'bg-surface border border-surface-border' : 'bg-white border border-gray-200'} animate-slide-up max-h-[90vh] overflow-y-auto`}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Upload Video
-                </h2>
-                <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Step {step} of 4
-                </div>
-              </div>
-              <button onClick={handleClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-background-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>
-                ✕
-              </button>
-            </div>
-
-            {/* Progress bar */}
-            <div className="flex gap-2 mb-6">
-              {[1, 2, 3, 4].map((s) => (
-                <div
-                  key={s}
-                  className={`flex-1 h-1 rounded-full transition-smooth ${
-                    s <= step ? 'bg-primary' : isDark ? 'bg-background-900' : 'bg-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className={`mb-4 p-3 rounded-xl text-sm break-words ${isDark ? 'bg-error/10 text-error' : 'bg-red-50 text-red-600'}`}>
-                {error}
-              </div>
-            )}
-
-            {/* Step content */}
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-            {step === 4 && renderStep4()}
-
-            {/* Buttons */}
-            <div className="flex gap-3 mt-6">
-              {step > 1 && step < 4 && !result ? (
-                <button
-                  onClick={handleBack}
-                  className={`px-5 py-3 rounded-xl font-medium transition-smooth ${
-                    isDark
-                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                      : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                  }`}
-                >
-                  Back
-                </button>
-              ) : (
-                <button
-                  onClick={handleClose}
-                  disabled={loading}
-                  className={`px-5 py-3 rounded-xl font-medium transition-smooth ${
-                    isDark
-                      ? 'bg-background-700 text-gray-200 hover:bg-background-600'
-                      : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                  }`}
-                >
-                  {result ? 'Close' : 'Cancel'}
-                </button>
-              )}
-
-              {step < 4 && !result && (
-                <button
-                  onClick={handleNext}
-                  disabled={(step === 1 && !file) || loading}
-                  className="flex-1 px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50"
-                >
-                  {step === 3 ? 'Review' : 'Next'}
-                </button>
-              )}
-
-              {step === 4 && !result && (
-                <button
-                  onClick={handleUpload}
-                  disabled={loading}
-                  className="flex-1 px-5 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-lg">🚀</div>
-                      Upload Now
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           </div>
         </div>
       );
     }
 
-    // ====== TOAST COMPONENT ======
-    function Toast({ message, isDark }) {
-      if (!message) return null;
-
-      // Поддержка как строк, так и объектов
-      const title = typeof message === 'string' ? message : message.title;
-      const description = typeof message === 'string' ? null : message.description;
-      const type = typeof message === 'string' ? 'info' : (message.type || 'info');
-
-      // Цвета для разных типов
-      const typeColors = {
-        success: {
-          bg: isDark ? 'bg-green-900/30' : 'bg-green-50',
-          border: 'border-green-500/30',
-          text: isDark ? 'text-green-400' : 'text-green-700',
-          iconColor: 'text-green-500'
-        },
-        error: {
-          bg: isDark ? 'bg-red-900/30' : 'bg-red-50',
-          border: 'border-red-500/30',
-          text: isDark ? 'text-red-400' : 'text-red-700',
-          iconColor: 'text-red-500'
-        },
-        info: {
-          bg: isDark ? 'bg-gray-800' : 'bg-white',
-          border: 'border-yellow-500/30',
-          text: isDark ? 'text-white' : 'text-gray-900',
-          iconColor: 'text-yellow-500'
-        }
-      };
-
-      const colors = typeColors[type] || typeColors.info;
-
-      // Иконки для разных типов
-      const icons = {
-        success: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
-        error: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
-        info: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        )
-      };
+    // Footer
+    function Footer() {
+      const { lang, t } = useContext(TranslationContext);
+      const { isDark } = useContext(ThemeContext);
 
       return (
-        <div className={`fixed top-6 right-6 z-50 animate-slide-in-right ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          <div className={`px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border ${colors.bg} ${colors.border}`}>
-            <div className={`flex-shrink-0 ${colors.iconColor}`}>
-              {icons[type] || icons.info}
-            </div>
-            <div className="flex-1">
-              <p className={`font-medium ${colors.text}`}>{title}</p>
-              {description && <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{description}</p>}
-            </div>
+        <footer className={`mt-auto py-6 px-6 border-t ${isDark ? 'border-surface-border' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-center gap-6 text-sm">
+            <a
+              href="/privacy"
+              className={`transition-smooth hover:text-primary ${isDark ? 'text-gray-500' : 'text-gray-600'}`}
+            >
+              {t.privacyPolicy}
+            </a>
+            <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>|</span>
+            <a
+              href="/terms"
+              className={`transition-smooth hover:text-primary ${isDark ? 'text-gray-500' : 'text-gray-600'}`}
+            >
+              {t.termsOfService}
+            </a>
           </div>
-          <style>{`
-            @keyframes slide-in-right {
-              from {
-                transform: translateX(100%);
-                opacity: 0;
-              }
-              to {
-                transform: translateX(0);
-                opacity: 1;
-              }
-            }
-            .animate-slide-in-right {
-              animation: slide-in-right 0.3s ease-out;
-            }
-          `}</style>
-        </div>
+        </footer>
       );
     }
 
-    // ====== MAIN APP ======
+    // Main App
     function App() {
       const [lang, setLang] = useState('en');
       const [isDark, setIsDark] = useState(true);
-      const [currentPage, setCurrentPage] = useState('dashboard');
-      const [profiles, setProfiles] = useState({}); // { tiktok: {...}, youtube: {...} }
+      const [currentPage, setCurrentPage] = useState('library');
+      const [profiles, setProfiles] = useState({});
       const [showAuthModal, setShowAuthModal] = useState(false);
-      const [showUploadModal, setShowUploadModal] = useState(false);
-      const [selectedProjectId, setSelectedProjectId] = useState(null);
-      const [stats, setStats] = useState(kpiData);
-      const [toast, setToast] = useState(null);
-      const [activities, setActivities] = useState([]);
-
-      const showToast = (message) => {
-        setToast(message);
-        setTimeout(() => setToast(null), 3000);
-      };
-
-      const handleUploadSuccess = (uploadData) => {
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          uploaded: { ...prev.uploaded, value: prev.uploaded.value + 1 }
-        }));
-
-        // Add activity
-        const newActivity = {
-          id: Date.now(),
-          type: 'upload',
-          platform: uploadData.platform || 'TikTok',
-          video: uploadData.videoName || 'Uploaded video',
-          time: lang === 'ru' ? 'Только что' : 'Just now',
-          status: 'success'
-        };
-        setActivities(prev => [newActivity, ...prev]);
-      };
+      const [selectedVideo, setSelectedVideo] = useState(null);
 
       const t = translations[lang];
 
-      // Toggle theme
-      const toggleTheme = () => {
-        setIsDark(!isDark);
-      };
+      const toggleTheme = () => setIsDark(!isDark);
 
-      // Apply theme to body
       useEffect(() => {
-        if (isDark) {
-          document.body.classList.remove('light');
-          document.body.classList.add('dark');
-        } else {
-          document.body.classList.remove('dark');
-          document.body.classList.add('light');
-        }
-      }, [isDark]);
-
-      // Load user profiles on mount
-      useEffect(() => {
-        const loadProfiles = async () => {
-          try {
-            const data = await apiRequest('/api/me');
-            setProfiles(data.profiles || {});
-          } catch (e) {
-            console.log('Not logged in');
-          }
-        };
         loadProfiles();
       }, []);
 
-      // Load stats
-      useEffect(() => {
-        const loadStats = async () => {
-          try {
-            const data = await apiRequest('/api/stats');
-            setStats({
-              uploaded: { value: data.uploaded, change: 12.5, trend: 'up' },
-              scheduled: { value: data.scheduled, change: 8.2, trend: 'up' },
-              published: { value: data.published, change: -2.1, trend: 'down' },
-              errors: { value: data.errors, change: -15.3, trend: 'up' },
-            });
-          } catch (e) {
-            console.log('Stats not loaded');
-          }
-        };
-        loadStats();
-      }, []);
+      const loadProfiles = async () => {
+        try {
+          const response = await apiRequest('/api/me');
+          setProfiles(response.profiles || {});
+        } catch (error) {
+          console.error('Failed to load profiles:', error);
+        }
+      };
 
-      const handleAuthSuccess = (newProfile) => {
-        setProfiles(prev => ({
-          ...prev,
-          [newProfile.platform]: newProfile
-        }));
+      const handleAuthSuccess = (profile) => {
+        loadProfiles();
       };
 
       const handleLogout = async (platform) => {
-        // Временно убираем запрос к API - endpoint ещё не задеплоен
-        // TODO: раскомментировать после деплоя worker.js
-        // try {
-        //   await apiRequest('/api/oauth/logout', {
-        //     method: 'POST',
-        //     body: JSON.stringify({ platform }),
-        //   });
-        // } catch (error) {
-        //   console.log('[Logout] Server error:', error);
-        // }
-
-        // Очищаем профиль из состояния
-        setProfiles(prev => {
-          const newProfiles = { ...prev };
-          delete newProfiles[platform];
-          return newProfiles;
-        });
-
-        // Упрощённый toast без использования lang
-        const platformName = platform === 'tiktok' ? 'TikTok' : 'YouTube';
-        showToast({
-          title: 'Account disconnected',
-          description: `${platformName} has been disconnected from your account`,
-          type: 'success',
-        });
+        try {
+          await apiRequest('/api/oauth/logout', {
+            method: 'POST',
+            body: JSON.stringify({ platform }),
+          });
+          loadProfiles();
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
       };
 
-      const handleUploadClick = (projectId) => {
-        const hasProfile = Object.keys(profiles).length > 0;
-        if (!hasProfile) {
+      const handlePublish = (video) => {
+        if (!profiles.tiktok) {
           setShowAuthModal(true);
-        } else {
-          setSelectedProjectId(projectId);
-          setShowUploadModal(true);
+          return;
         }
-      };
-
-      const renderPage = () => {
-        switch (currentPage) {
-          case 'dashboard':
-            return <DashboardPage onUpload={() => handleUploadClick(null)} setCurrentPage={setCurrentPage} profiles={profiles} activities={activities} stats={stats} />;
-          case 'projects':
-            return <ProjectsPage onUpload={(id) => handleUploadClick(id)} />;
-          case 'scheduler':
-            return <SchedulerPage />;
-          case 'uploads':
-            return <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <div className="text-6xl mb-4">📤</div>
-                <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Uploads Page
-                </div>
-                <button
-                  onClick={() => handleUploadClick(null)}
-                  className="mt-4 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
-                >
-                  Upload New Video
-                </button>
-              </div>
-            </div>;
-          case 'analytics':
-            return <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <div className="text-6xl mb-4">📊</div>
-                <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Analytics Page
-                </div>
-              </div>
-            </div>;
-          case 'settings':
-            return (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h1 className={`text-2xl font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Settings</h1>
-
-                  <div className={`border rounded-2xl p-6 ${isDark ? 'bg-surface border-surface-border' : 'bg-white border-gray-200'}`}>
-                    <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                      Connected Accounts
-                    </h2>
-
-                    <div className="space-y-4">
-                      {/* TikTok */}
-                      <div className={`p-4 rounded-xl ${isDark ? 'bg-background-800' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            {(() => {
-                              console.log('[TikTok Profile Debug]', profiles.tiktok);
-                              const hasAvatar = profiles.tiktok?.avatar_url;
-                              console.log('[TikTok Avatar URL]', hasAvatar);
-                              return null;
-                            })()}
-                            {profiles.tiktok?.avatar_url ? (
-                              <img
-                                src={profiles.tiktok.avatar_url}
-                                alt={profiles.tiktok.display_name}
-                                className="w-12 h-12 rounded-xl object-cover"
-                                onError={(e) => {
-                                  console.log('[TikTok Avatar Error]', e);
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center">
-                                <Icons.TikTok />
-                              </div>
-                            )}
-                            <div>
-                              {profiles.tiktok ? (
-                                <>
-                                  <div className={`text-base font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                                    {profiles.tiktok.display_name}
-                                  </div>
-                                  <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                                    {profiles.tiktok.followers_count
-                                      ? `${profiles.tiktok.followers_count?.toLocaleString()} followers`
-                                      : (profiles.tiktok.handle || 'Connected')
-                                    }
-                                  </div>
-                                </>
-                              ) : (
-                                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  Not connected
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            {profiles.tiktok ? (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setCurrentPage('settings');
-                                    setShowAuthModal(true);
-                                  }}
-                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                                >
-                                  Reconnect
-                                </button>
-                                <button
-                                  onClick={() => handleLogout('tiktok')}
-                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-100 text-red-700 hover:bg-red-200`}
-                                >
-                                  Disconnect
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setCurrentPage('settings');
-                                  setShowAuthModal(true);
-                                }}
-                                className="px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-black text-white hover:bg-gray-800"
-                              >
-                                Connect
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* YouTube */}
-                      <div className={`p-4 rounded-xl ${isDark ? 'bg-background-800' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center">
-                              <Icons.YouTube />
-                            </div>
-                            <div>
-                              {profiles.youtube ? (
-                                <>
-                                  <div className={`text-base font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                                    {profiles.youtube.title}
-                                  </div>
-                                  <div className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                                    {profiles.youtube.subscriber_count?.toLocaleString()} subscribers
-                                  </div>
-                                </>
-                              ) : (
-                                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  Not connected
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            {profiles.youtube ? (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setCurrentPage('settings');
-                                    setShowAuthModal(true);
-                                  }}
-                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth ${isDark ? 'bg-background-700 text-gray-300 hover:bg-background-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                                >
-                                  Reconnect
-                                </button>
-                                <button
-                                  onClick={() => handleLogout('youtube')}
-                                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-100 text-red-700 hover:bg-red-200`}
-                                >
-                                  Disconnect
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setCurrentPage('settings');
-                                  setShowAuthModal(true);
-                                }}
-                                className="px-4 py-2 rounded-xl text-sm font-medium transition-smooth bg-red-600 text-white hover:bg-red-700"
-                              >
-                                Connect
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          default:
-            return (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🚧</div>
-                  <div className={`text-lg font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Coming Soon
-                  </div>
-                </div>
-              </div>
-            );
-        }
+        setSelectedVideo(video);
       };
 
       return (
         <TranslationContext.Provider value={{ lang, setLang, t, isDark }}>
           <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-            <div className={`min-h-screen grid-pattern ${isDark ? 'dark' : 'light'}`}>
-              <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} profiles={profiles} onConnectAccount={() => setShowAuthModal(true)} onShowToast={showToast} />
+            <div className={`min-h-screen grid-pattern ${isDark ? 'dark' : 'light'} flex flex-col`}>
+              <Sidebar
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                profiles={profiles}
+                onConnectAccount={() => setShowAuthModal(true)}
+              />
 
-              <div className="ml-64">
-                <Header />
-
-                <main className="p-6">
-                  {renderPage()}
-                </main>
+              <div className="ml-64 flex-1 flex flex-col">
+                <div className="p-6 flex-1">
+                  <Header />
+                  <main>
+                    {currentPage === 'library' && (
+                      <ContentLibraryPage
+                        onPublish={handlePublish}
+                      />
+                    )}
+                    {currentPage === 'settings' && (
+                      <SettingsPage
+                        profiles={profiles}
+                        onConnectAccount={() => setShowAuthModal(true)}
+                        onLogout={handleLogout}
+                      />
+                    )}
+                  </main>
+                </div>
+                <Footer />
               </div>
 
               <AuthModal
@@ -3337,14 +1671,14 @@
                 onSuccess={handleAuthSuccess}
               />
 
-              <UploadModal
-                isOpen={showUploadModal}
-                onClose={() => setShowUploadModal(false)}
-                projectId={selectedProjectId}
-                onUploadSuccess={handleUploadSuccess}
-              />
-
-              <Toast message={toast} isDark={isDark} />
+              {selectedVideo && (
+                <TikTokPublishFlow
+                  isOpen={!!selectedVideo}
+                  onClose={() => setSelectedVideo(null)}
+                  video={selectedVideo}
+                  profile={profiles.tiktok}
+                />
+              )}
             </div>
           </ThemeContext.Provider>
         </TranslationContext.Provider>
@@ -3352,21 +1686,12 @@
     }
 
     // ====== OAUTH CALLBACK HANDLER ======
-    // Проверяем, не является ли это OAuth callback (от TikTok/YouTube)
     const urlParams = new URLSearchParams(window.location.search);
     const oauthCode = urlParams.get('code');
     const oauthState = urlParams.get('state');
     const oauthError = urlParams.get('error');
 
-    // Логирование для отладки
-    console.log('[Callback] URL params:', { oauthCode: oauthCode?.substring(0, 20) + '...', oauthState, oauthError, hasOpener: !!window.opener });
-    console.log('[Callback] Full URL:', window.location.href);
-
-    // Если есть код/ошибка от OAuth — сохраняем в sessionStorage
     if (oauthCode || oauthError) {
-      console.log('[Callback] OAuth callback detected! Saving to sessionStorage...');
-
-      // Сохраняем данные в sessionStorage
       const oauthData = {
         code: oauthCode,
         state: oauthState,
@@ -3374,13 +1699,9 @@
         timestamp: Date.now()
       };
       sessionStorage.setItem('oauth_callback', JSON.stringify(oauthData));
-
-      // Убираем код из URL (для безопасности)
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      // Если есть родительское окно — пытаемся отправить сообщение и закрыть popup
       if (window.opener) {
-        console.log('[Callback] Has parent window, trying postMessage...');
         try {
           window.opener.postMessage({
             type: 'oauth_code',
@@ -3388,17 +1709,15 @@
             state: oauthState,
             error: oauthError
           }, '*');
-          console.log('[Callback] Message sent to parent');
         } catch (e) {
           console.error('[Callback] postMessage failed:', e);
         }
 
-        // Показываем сообщение и закрываем окно
         document.body.innerHTML = `
           <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #0a0a0b; color: white;">
             <div style="text-align: center;">
-              <h2 style="color: #10b981; margin-bottom: 1rem;">✓ Авторизация успешна!</h2>
-              <p style="color: #94a3b8;">Это окно можно закрыть</p>
+              <h2 style="color: #10b981; margin-bottom: 1rem;">✓ Authorization successful!</h2>
+              <p style="color: #94a3b8;">You can close this window</p>
             </div>
           </div>
         `;
@@ -3407,13 +1726,9 @@
           window.close();
         }, 1500);
       } else {
-        console.log('[Callback] No parent window, reloading page to process code...');
-        // Если нет родительского окна — перезагружаем страницу, чтобы обработать код
         window.location.reload();
       }
     } else {
-      console.log('[Callback] Not an OAuth callback, loading app...');
-      // ====== INIT ======
       const root = ReactDOM.createRoot(document.getElementById("root"));
       root.render(<App />);
     }
