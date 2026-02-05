@@ -695,41 +695,14 @@ async function handleUpload(req, env, cors) {
 
   let initJson = {};
   try { initJson = JSON.parse(initText); } catch { }
-
-  // Detailed error logging
-  if (!initResp.ok) {
+  const initOk = initResp.ok && (!initJson.error || initJson.error.code === "ok");
+  if (!initOk) {
     console.error("[TikTok Upload] INIT failed:", {
       status: initResp.status,
       statusText: initResp.statusText,
       body: initJson,
       headers: Object.fromEntries(initResp.headers.entries())
     });
-
-    const errorCode = initJson?.error?.code;
-    const errorMessage = initJson?.error?.message;
-
-    return json({
-      error: "init_failed",
-      status: initResp.status,
-      detail: {
-        code: errorCode,
-        message: errorMessage,
-        full_response: initJson
-      }
-    }, cors, 400);
-  }
-
-  // Check for error in JSON even if status is OK
-  if (initJson.error && initJson.error.code !== "ok") {
-    console.error("[TikTok Upload] Error in OK response:", initJson.error);
-    return json({
-      error: "tiktok_api_error",
-      detail: initJson.error
-    }, cors, 400);
-  }
-
-  const initOk = !initJson.error || initJson.error.code === "ok";
-  if (!initOk) {
     return json({ error: "init_failed", status: initResp.status, detail: initJson || initText }, cors, 400);
   }
 
