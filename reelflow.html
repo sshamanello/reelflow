@@ -1131,6 +1131,22 @@
         onPublish(video);
       };
 
+      const handleDelete = async (videoId) => {
+        if (!confirm(lang === 'ru' ? 'Удалить это видео?' : 'Delete this video?')) {
+          return;
+        }
+
+        try {
+          await apiRequest(`/api/videos/${videoId}`, {
+            method: 'DELETE',
+          });
+          setVideos(videos.filter(v => v.id !== videoId));
+        } catch (error) {
+          console.error('Delete error:', error);
+          alert('Failed to delete video: ' + error.message);
+        }
+      };
+
       if (loading) {
         return (
           <div className="flex items-center justify-center h-96">
@@ -1194,6 +1210,14 @@
                         </p>
                       </div>
                     )}
+                    {/* Delete button */}
+                    <button
+                      onClick={() => handleDelete(video.id)}
+                      className="absolute top-2 right-2 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-smooth"
+                      title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                    >
+                      <Icons.X />
+                    </button>
                   </div>
                   <div className="p-4">
                     <h3 className={`font-semibold mb-2 truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>

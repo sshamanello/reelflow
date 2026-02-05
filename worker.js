@@ -992,6 +992,26 @@ async function handleSaveVideo(req, env, cors) {
   return json({ video: newVideo }, cors, 201);
 }
 
+async function handleDeleteVideo(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+
+  const url = new URL(req.url);
+  const videoId = parseInt(url.pathname.split('/').pop());
+
+  const videosKey = `videos:${sid}`;
+  const raw = await env.SESSIONS.get(videosKey);
+  const videos = raw ? JSON.parse(raw) : [];
+
+  const updatedVideos = videos.filter(v => v.id !== videoId);
+
+  await env.SESSIONS.put(videosKey, JSON.stringify(updatedVideos), {
+    expirationTtl: 60 * 60 * 24 * 30,
+  });
+
+  return json({ success: true }, cors, 200);
+}
+
 async function handleGetStats(req, env, cors) {
   const sid = getSidFromReq(req, env);
   if (!sid) return json({ error: "unauthorized" }, cors, 401);
@@ -1083,6 +1103,9 @@ export default {
       }
       if (url.pathname === "/api/videos" && req.method === "POST") {
         return await handleSaveVideo(req, env, cors);
+      }
+      if (url.pathname.startsWith("/api/videos/") && req.method === "DELETE") {
+        return await handleDeleteVideo(req, env, cors);
       }
 
       // Stats
