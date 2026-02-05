@@ -14,7 +14,7 @@ function makeCORS(env, origin) {
     "Access-Control-Allow-Origin": isAllowed ? (origin || allowedList[0]) : "null",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Vary": "Origin",
   };
 }
