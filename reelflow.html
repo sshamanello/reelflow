@@ -206,6 +206,11 @@
         brandedContentType: "Branded Content Type",
         brandedContentOnlyMe: "Note: 'Only Me' privacy is not allowed for branded content",
 
+        uploadDifferentVideo: "Upload Different Video",
+        useThisFrame: "Use This Frame",
+        videoThumbnail: "Video Thumbnail",
+        selectFrame: "Select a frame",
+
         consentTitle: "Consent & Agreement",
         consentYourBrand: "By posting, you agree to TikTok's Music Usage Confirmation.",
         consentBranded: "By posting, you agree to TikTok's Branded Content Policy and Music Usage Confirmation.",
@@ -279,6 +284,11 @@
         yourBrand: "Ваш бренд",
         brandedContentType: "Тип брендированного контента",
         brandedContentOnlyMe: "Примечание: Приватность 'Только я' недоступна для брендированного контента",
+
+        uploadDifferentVideo: "Загрузить другое видео",
+        useThisFrame: "Использовать этот кадр",
+        videoThumbnail: "Обложка видео",
+        selectFrame: "Выберите кадр",
 
         consentTitle: "Согласие и соглашение",
         consentYourBrand: "Публикуя, вы соглашаетесь с подтверждением использования музыки TikTok.",
@@ -770,117 +780,117 @@
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Video Preview */}
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'} flex items-center justify-center`} style={{ height: '400px', width: '225px' }}>
-                        {videoPreviewUrl || video.local_preview_url ? (
-                          <video
-                            ref={videoPlayerRef}
-                            src={videoPreviewUrl || video.local_preview_url}
-                            className="h-full w-full object-contain"
-                            onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-                            onLoadedMetadata={(e) => setDuration(e.target.duration)}
-                          />
-                        ) : (
-                          <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            <Icons.Upload />
-                            <p className="mt-2">No preview available</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Timeline Slider */}
-                    {videoPreviewUrl || video.local_preview_url ? (
-                      <div className="space-y-2">
-                        <input
-                          type="range"
-                          min="0"
-                          max={duration || 100}
-                          step="0.1"
-                          value={currentTime}
-                          onChange={(e) => {
-                            const time = parseFloat(e.target.value);
-                            setCurrentTime(time);
-                            if (videoPlayerRef.current) {
-                              videoPlayerRef.current.currentTime = time;
-                            }
-                          }}
-                          className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                          style={{
-                            background: isDark ? '#23232a' : '#e2e8f0',
-                            accent: '#14b8a6'
-                          }}
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'} flex items-center justify-center`} style={{ height: '400px', width: '225px' }}>
+                      {videoPreviewUrl || video.local_preview_url ? (
+                        <video
+                          ref={videoPlayerRef}
+                          src={videoPreviewUrl || video.local_preview_url}
+                          className="h-full w-full object-contain"
+                          onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+                          onLoadedMetadata={(e) => setDuration(e.target.duration)}
                         />
-                        <div className={`flex justify-between text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
+                      ) : (
+                        <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <Icons.Upload />
+                          <p className="mt-2">{t.selectFrame}</p>
                         </div>
-                      </div>
-                    ) : null}
-
-                    {/* Upload Video Button */}
-                    <div className="flex justify-center">
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        className="hidden"
-                        id="video-no-watermark-upload"
-                        ref={videoInputRef}
-                      />
-                      <button
-                        onClick={() => videoInputRef.current?.click()}
-                        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
-                      >
-                        <Icons.Upload />
-                        {videoPreviewUrl ? 'Change Video' : 'Upload Different Video'}
-                      </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Thumbnail Preview */}
-                  <div className="space-y-4">
-                    <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {lang === 'ru' ? 'Обложка видео' : 'Video Thumbnail'}
-                    </h3>
-
-                    <div className="flex justify-center">
-                      <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'} flex items-center justify-center relative`} style={{ height: '400px', width: '225px' }}>
-                        {thumbnailUrl ? (
-                          <img
-                            src={thumbnailUrl}
-                            alt="Thumbnail"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            <Icons.Check />
-                            <p className="mt-2 text-sm">
-                              {lang === 'ru' ? 'Выберите кадр' : 'Select a frame'}
-                            </p>
-                          </div>
-                        )}
+                  {/* Timeline Slider */}
+                  {videoPreviewUrl || video.local_preview_url ? (
+                    <div className="space-y-2">
+                      <input
+                        type="range"
+                        min="0"
+                        max={duration || 100}
+                        step="0.1"
+                        value={currentTime}
+                        onChange={(e) => {
+                          const time = parseFloat(e.target.value);
+                          setCurrentTime(time);
+                          if (videoPlayerRef.current) {
+                            videoPlayerRef.current.currentTime = time;
+                          }
+                        }}
+                        className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                        style={{
+                          background: isDark ? '#23232a' : '#e2e8f0',
+                          accent: '#14b8a6'
+                        }}
+                      />
+                      <div className={`flex justify-between text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration)}</span>
                       </div>
                     </div>
+                  ) : null}
 
-                    {/* Capture Button */}
-                    <div className="flex justify-center">
-                      <button
-                        onClick={captureThumbnail}
-                        disabled={!videoPreviewUrl && !video.local_preview_url}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-smooth ${
-                          (videoPreviewUrl || video.local_preview_url)
-                            ? 'bg-accent text-white hover:bg-accent-600'
-                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        <Icons.Check />
-                        {lang === 'ru' ? 'Использовать этот кадр' : 'Use This Frame'}
-                      </button>
-                    </div>
+                  {/* Upload Video Button */}
+                  <div className="flex justify-center">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoUpload}
+                      className="hidden"
+                      id="video-no-watermark-upload"
+                      ref={videoInputRef}
+                    />
+                    <button
+                      onClick={() => videoInputRef.current?.click()}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary-600 transition-smooth"
+                    >
+                      <Icons.Upload />
+                      {videoPreviewUrl ? t.uploadDifferentVideo : t.uploadDifferentVideo}
+                    </button>
                   </div>
                 </div>
+
+                {/* Thumbnail Preview */}
+                <div className="space-y-4">
+                  <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t.videoThumbnail}
+                  </h3>
+
+                  <div className="flex justify-center">
+                    <div className={`rounded-xl overflow-hidden ${isDark ? 'bg-surface' : 'bg-gray-100'} flex items-center justify-center relative`} style={{ height: '400px', width: '225px' }}>
+                      {thumbnailUrl ? (
+                        <img
+                          src={thumbnailUrl}
+                          alt="Thumbnail"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <Icons.Check />
+                          <p className="mt-2 text-sm">
+                            {t.selectFrame}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Capture Button */}
+                  <div className="flex justify-center">
+                    <button
+                      onClick={captureThumbnail}
+                      disabled={!videoPreviewUrl && !video.local_preview_url}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-smooth ${
+                        (videoPreviewUrl || video.local_preview_url)
+                          ? 'bg-accent text-white hover:bg-accent-600'
+                          : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <Icons.Check />
+                      {t.useThisFrame}
+                    </button>
+                  </div>
+                </div>
+              </div>
               </div>
             );
 
@@ -1748,6 +1758,15 @@
       useEffect(() => {
         loadProfiles();
       }, []);
+
+      // Update body class when theme changes
+      useEffect(() => {
+        if (isDark) {
+          document.body.classList.remove('light');
+        } else {
+          document.body.classList.add('light');
+        }
+      }, [isDark]);
 
       const loadProfiles = async () => {
         try {
