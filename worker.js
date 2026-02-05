@@ -522,7 +522,8 @@ async function handlePublish(req, env, cors) {
       duet_disabled = false,
       stitch_disabled = false,
       is_branded_content = false,
-      brand_content_type = []
+      brand_content_type = [],
+      thumbnail_url = null
     } = body;
 
     if (!video_ref) {
@@ -550,6 +551,11 @@ async function handlePublish(req, env, cors) {
       brand_authorized: is_branded_content,
       brand_content_type: brand_content_type
     };
+
+    // Add thumbnail if provided
+    if (thumbnail_url) {
+      publishBody.cover_url = thumbnail_url;
+    }
 
     console.log("Publishing to TikTok:", JSON.stringify(publishBody, null, 2));
 
