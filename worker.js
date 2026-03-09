@@ -767,7 +767,8 @@ async function handleYoutubeUpload(req, env, cors) {
 
 async function handleGetProjects(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const projectsKey = `projects:${sid}`;
   const raw = await env.SESSIONS.get(projectsKey);
@@ -778,7 +779,8 @@ async function handleGetProjects(req, env, cors) {
 
 async function handleCreateProject(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const body = await req.json();
   const { name, platforms } = body;
@@ -810,7 +812,8 @@ async function handleCreateProject(req, env, cors) {
 
 async function handleGetVideos(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const videosKey = `videos:${sid}`;
   const raw = await env.SESSIONS.get(videosKey);
@@ -821,7 +824,8 @@ async function handleGetVideos(req, env, cors) {
 
 async function handleSaveVideo(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const body = await req.json();
   const { projectId, videoName, publishId, status } = body;
@@ -864,7 +868,8 @@ async function handleSaveVideo(req, env, cors) {
 
 async function handleGetStats(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const videosKey = `videos:${sid}`;
   const raw = await env.SESSIONS.get(videosKey);
@@ -898,10 +903,10 @@ export default {
       }
 
       // OAuth (unified for both platforms)
-      if (url.pathname === "/api/oauth/exchange" && req.method === "POST") {
+      if ((url.pathname === "/api/oauth/exchange" || url.pathname === "/api/exchange") && req.method === "POST") {
         return await handleExchange(req, env, cors);
       }
-      if (url.pathname === "/api/oauth/logout" && req.method === "POST") {
+      if ((url.pathname === "/api/oauth/logout" || url.pathname === "/api/logout") && req.method === "POST") {
         return await handleLogout(req, env, cors);
       }
       if (url.pathname === "/api/me" && req.method === "GET") {
