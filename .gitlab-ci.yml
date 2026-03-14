@@ -1,0 +1,125 @@
+# ================================================================
+# ReelFlow — GitLab CI/CD Pipeline
+# ================================================================
+#
+# Stages:
+#   test    → lint + build check (все ветки)
+#   deploy  → деплой воркера и фронтенда (только main/develop)
+#
+# Нужные переменные в GitLab (Settings → CI/CD → Variables):
+#
+#   CLOUDFLARE_API_TOKEN     — токен Cloudflare с правами Workers + Pages
+#   CLOUDFLARE_ACCOUNT_ID    — ID аккаунта Cloudflare
+#   TIKTOK_CLIENT_KEY        — TikTok OAuth client key
+#   TIKTOK_CLIENT_SECRET     — TikTok OAuth client secret
+#   CF_PAGES_PROJECT_NAME    — имя проекта в Cloudflare Pages (напр. "reelflow")
+#
+# ================================================================
+
+image: node:20-alpine
+
+stages:
+  - test
+  - deploy
+
+# ── Кэш node_modules ──────────────────────────────────────────
+.node_cache: &node_cache
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull-push
+
+# ================================================================
+# STAGE: test
+# ================================================================
+
+build:
+  stage: test
+  <<: *node_cache
+  script:
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ================================================================
+# STAGE: deploy — develop → staging (worker-dev + pages preview)
+# ================================================================
+
+deploy:worker:staging:
+  stage: deploy
+  <<: *node_cache
+  needs: [build]
+  environment:
+    name: staging
+    url: https://reelflow-worker-dev.sshamanello.workers.dev
+  script:
+    - npm ci --prefer-offline
+    # Устанавливаем секреты в worker (dev env)
+    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env dev --name reelflow-worker-dev
+    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env dev --name reelflow-worker-dev
+    # Деплоим воркер в dev
+    - npx wrangler deploy --env dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+deploy:pages:staging:
+  stage: deploy
+  needs: [build]
+  environment:
+    name: staging/pages
+  script:
+    - npm install -g wrangler
+    # Деплоим dist/ в Cloudflare Pages (preview деплой)
+    - npx wrangler pages deploy dist/
+        --project-name "$CF_PAGES_PROJECT_NAME"
+        --branch develop
+        --commit-hash "$CI_COMMIT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# ================================================================
+# STAGE: deploy — main → production
+# ================================================================
+
+deploy:worker:production:
+  stage: deploy
+  <<: *node_cache
+  needs: [build]
+  environment:
+    name: production
+    url: https://reelflow-worker.sshamanello.workers.dev
+  script:
+    - npm ci --prefer-offline
+    # Устанавливаем секреты в production worker
+    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env production
+    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env production
+    # Деплоим воркер в production
+    - npx wrangler deploy --env production
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+deploy:pages:production:
+  stage: deploy
+  needs: [build]
+  environment:
+    name: production/pages
+    url: https://reelflow.pages.dev
+  script:
+    - npm install -g wrangler
+    # Деплоим dist/ в Cloudflare Pages (production деплой)
+    - npx wrangler pages deploy dist/
+        --project-name "$CF_PAGES_PROJECT_NAME"
+        --branch main
+        --commit-hash "$CI_COMMIT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
