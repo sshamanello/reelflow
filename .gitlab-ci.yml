@@ -3,23 +3,27 @@
 # ================================================================
 #
 # Stages:
-#   test    → lint + build check (все ветки)
+#   build   → vite build (все нужные ветки)
 #   deploy  → деплой воркера и фронтенда (только main/develop)
 #
-# Нужные переменные в GitLab (Settings → CI/CD → Variables):
+# Переменные GitLab (Settings → CI/CD → Variables):
 #
-#   CLOUDFLARE_API_TOKEN     — токен Cloudflare с правами Workers + Pages
-#   CLOUDFLARE_ACCOUNT_ID    — ID аккаунта Cloudflare
-#   TIKTOK_CLIENT_KEY        — TikTok OAuth client key
-#   TIKTOK_CLIENT_SECRET     — TikTok OAuth client secret
-#   CF_PAGES_PROJECT_NAME    — имя проекта в Cloudflare Pages (напр. "reelflow")
+#   CLOUDFLARE_API_TOKEN   — токен Cloudflare (Workers + Pages)
+#   CLOUDFLARE_ACCOUNT_ID  — ID аккаунта Cloudflare
+#   TIKTOK_CLIENT_KEY      — TikTok OAuth client key
+#   TIKTOK_CLIENT_SECRET   — TikTok OAuth client secret
+#
+#   REGRU_HOST             — сервер reg.ru (напр. server279.hosting.reg.ru)
+#   REGRU_USER             — логин FTP/SSH (напр. sshamanello)
+#   REGRU_PASSWORD         — пароль FTP
+#   REGRU_PATH             — путь на сервере (напр. /www/sshamanello.ru)
 #
 # ================================================================
 
 image: node:20-alpine
 
 stages:
-  - test
+  - build
   - deploy
 
 # ── Кэш node_modules ──────────────────────────────────────────
@@ -33,11 +37,11 @@ stages:
     policy: pull-push
 
 # ================================================================
-# STAGE: test
+# STAGE: build
 # ================================================================
 
 build:
-  stage: test
+  stage: build
   <<: *node_cache
   script:
     - npm ci --prefer-offline
@@ -52,11 +56,12 @@ build:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
 # ================================================================
-# STAGE: deploy — develop → staging (worker-dev + pages preview)
+# STAGE: deploy — develop → staging worker
 # ================================================================
 
 deploy:worker:staging:
   stage: deploy
+  image: node:20-alpine
   <<: *node_cache
   needs: [build]
   environment:
@@ -64,62 +69,55 @@ deploy:worker:staging:
     url: https://reelflow-worker-dev.sshamanello.workers.dev
   script:
     - npm ci --prefer-offline
-    # Устанавливаем секреты в worker (dev env)
-    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env dev --name reelflow-worker-dev
-    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env dev --name reelflow-worker-dev
-    # Деплоим воркер в dev
+    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env dev
+    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env dev
     - npx wrangler deploy --env dev
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
 
-deploy:pages:staging:
-  stage: deploy
-  needs: [build]
-  environment:
-    name: staging/pages
-  script:
-    - npm install -g wrangler
-    # Деплоим dist/ в Cloudflare Pages (preview деплой)
-    - npx wrangler pages deploy dist/
-        --project-name "$CF_PAGES_PROJECT_NAME"
-        --branch develop
-        --commit-hash "$CI_COMMIT_SHA"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
 # ================================================================
-# STAGE: deploy — main → production
+# STAGE: deploy — main → production worker + reg.ru frontend
 # ================================================================
 
 deploy:worker:production:
   stage: deploy
+  image: node:20-alpine
   <<: *node_cache
   needs: [build]
   environment:
-    name: production
+    name: production/worker
     url: https://reelflow-worker.sshamanello.workers.dev
   script:
     - npm ci --prefer-offline
-    # Устанавливаем секреты в production worker
     - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env production
     - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env production
-    # Деплоим воркер в production
     - npx wrangler deploy --env production
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
-deploy:pages:production:
+deploy:frontend:regru:
   stage: deploy
+  image: alpine:latest
   needs: [build]
   environment:
-    name: production/pages
-    url: https://reelflow.pages.dev
+    name: production/frontend
+    url: https://sshamanello.ru
+  before_script:
+    - apk add --no-cache lftp
   script:
-    - npm install -g wrangler
-    # Деплоим dist/ в Cloudflare Pages (production деплой)
-    - npx wrangler pages deploy dist/
-        --project-name "$CF_PAGES_PROJECT_NAME"
-        --branch main
-        --commit-hash "$CI_COMMIT_SHA"
+    # Загружаем dist/ на reg.ru через FTPS
+    - |
+      lftp -c "
+        set ftps:initial-prot '';
+        set ftp:ssl-force true;
+        set ftp:ssl-protect-data true;
+        set ssl:verify-certificate false;
+        open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST;
+        mirror --reverse --delete --verbose
+          --exclude .git/
+          --exclude .gitignore
+          dist/ $REGRU_PATH/;
+        quit
+      "
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
