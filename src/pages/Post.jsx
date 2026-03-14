@@ -1,76 +1,36 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import SectionCard from "../components/SectionCard";
-import PlatformBubble from "../components/PlatformBubble";
 import { useAppToast } from "../components/Layout";
+import { useI18n } from "../hooks/useI18n";
 import { api } from "../lib/api";
-
-const initialPlatforms = [
-  { code: "TT", suffix: "TikTok", active: true },
-  { code: "YT", suffix: "Shorts", active: false },
-];
 
 export default function Post() {
   const { showToast } = useAppToast();
-  const [platforms, setPlatforms] = useState(initialPlatforms);
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [privacy, setPrivacy] = useState("public");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const activePlatforms = useMemo(
-    () => platforms.filter((p) => p.active).map((p) => p.code),
-    [platforms]
-  );
-
-  function togglePlatform(index) {
-    setPlatforms((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, active: !item.active } : item))
-    );
-  }
-
   async function handlePublishNow() {
     if (!file) {
-      showToast("Сначала выбери видеофайл");
-      return;
-    }
-    if (!activePlatforms.length) {
-      showToast("Выбери хотя бы одну платформу");
+      showToast(t("post_no_file"));
       return;
     }
     try {
       setUploading(true);
-      const results = [];
-
-      if (activePlatforms.includes("TT")) {
-        const res = await api.uploadTikTok({ file });
-        results.push("TikTok: " + (res.status || "ok"));
-        await api.saveVideo({
-          videoName: title || file.name,
-          publishId: res.publish_id,
-          status: res.status === "published" ? "published" : "uploaded",
-        });
-      }
-
-      if (activePlatforms.includes("YT")) {
-        const res = await api.uploadYouTube({
-          file,
-          title: title || file.name,
-          description,
-          privacy,
-          tags: "",
-        });
-        results.push("YouTube: " + (res.video_id || "ok"));
-        await api.saveVideo({
-          videoName: title || file.name,
-          publishId: res.publish_id,
-          status: "published",
-        });
-      }
-
-      showToast("Готово: " + results.join(" | "));
+      const res = await api.uploadTikTok({ file });
+      await api.saveVideo({
+        videoName: title || file.name,
+        publishId: res.publish_id,
+        status: res.status === "published" ? "published" : "uploaded",
+      });
+      showToast(t("post_done") + ": TikTok — " + (res.status || "ok"));
+      setFile(null);
+      setTitle("");
+      setDescription("");
     } catch (e) {
-      showToast(e?.payload?.message || e?.payload?.error || "Ошибка загрузки");
+      showToast(e?.payload?.message || e?.payload?.error || t("post_error"));
     } finally {
       setUploading(false);
     }
@@ -78,11 +38,11 @@ export default function Post() {
 
   return (
     <>
-      <h1 className="page-title">Опубликовать видео</h1>
-      <p className="page-subtitle">Загрузите видео один раз — опубликуем на всех подключённых платформах.</p>
+      <h1 className="page-title">{t("post_title")}</h1>
+      <p className="page-subtitle">{t("post_subtitle")}</p>
 
       <section className="grid-2">
-        <SectionCard title="Видеофайл">
+        <SectionCard title={t("post_video_file")}>
           <div className="column">
             <div>
               {!file ? (
@@ -95,14 +55,14 @@ export default function Post() {
                   <svg
                     width="40" height="40" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" strokeWidth="1.5"
-                    style={{ margin: "0 auto 10px", display: "block", color: "var(--muted)" }}
+                    style={{ display: "block", color: "var(--muted)", flexShrink: 0 }}
                   >
                     <polyline points="16 16 12 12 8 16"/>
                     <line x1="12" y1="12" x2="12" y2="21"/>
                     <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                   </svg>
-                  <div className="upload-text">Нажмите для выбора файла</div>
-                  <div className="upload-subtext">MP4, MOV, AVI · Макс. 4 ГБ</div>
+                  <div className="upload-text">{t("post_drop_hint")}</div>
+                  <div className="upload-subtext">{t("post_drop_sub")}</div>
                 </label>
               ) : (
                 <div>
@@ -117,69 +77,52 @@ export default function Post() {
                     style={{ marginTop: 8 }}
                     onClick={() => setFile(null)}
                   >
-                    Изменить файл
+                    {t("post_change_file")}
                   </button>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="label">Название</label>
+              <label className="label">{t("post_video_title")}</label>
               <input
                 className="field"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Например: Весенний лаунч — Ролик 1"
+                placeholder={t("post_video_title_ph")}
               />
             </div>
 
             <div>
-              <label className="label">Описание</label>
+              <label className="label">{t("post_description")}</label>
               <textarea
                 className="textarea"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Добавьте описание или хэштеги..."
+                placeholder={t("post_description_ph")}
               />
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Настройки публикации">
+        <SectionCard title={t("post_settings")}>
           <div className="column">
             <div>
-              <label className="label">Платформы</label>
+              <label className="label">{t("post_platforms")}</label>
               <div className="platform-row">
-                {platforms.map((item, index) => (
-                  <PlatformBubble
-                    key={item.code + index}
-                    code={item.code}
-                    suffix={item.suffix}
-                    active={item.active}
-                    onClick={() => togglePlatform(index)}
-                  />
-                ))}
+                <div className="platform-bubble active">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.72a4.85 4.85 0 0 1-1.02-.03z"/>
+                  </svg>
+                  TikTok
+                </div>
               </div>
-              <div className="helper">Нажмите на платформу для выбора</div>
-            </div>
-
-            <div>
-              <label className="label">Видимость (YouTube)</label>
-              <select
-                className="select"
-                value={privacy}
-                onChange={(e) => setPrivacy(e.target.value)}
-              >
-                <option value="public">Публично</option>
-                <option value="unlisted">По ссылке</option>
-                <option value="private">Приватно</option>
-              </select>
+              <div className="helper">{t("post_click_platform")}</div>
             </div>
 
             <div className="notice notice-info">
-              Доступны платформы: <strong>TikTok</strong> и <strong>YouTube Shorts</strong>.
-              Публикация через официальные API.
+              {t("post_tiktok_notice")}
             </div>
 
             <div className="inline-actions">
@@ -188,7 +131,7 @@ export default function Post() {
                 disabled={uploading || !file}
                 onClick={handlePublishNow}
               >
-                {uploading ? "Загрузка..." : "Опубликовать"}
+                {uploading ? t("post_uploading") : t("post_publish")}
               </button>
             </div>
           </div>

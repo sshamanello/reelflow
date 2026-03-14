@@ -1,5 +1,7 @@
 # Environment variables with secrets
 .env
+.env.local
+.env.*.local
 
 # Cloudflare
 .wrangler/

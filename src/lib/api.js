@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "";
-const MOCK_API = (import.meta.env.VITE_MOCK_API || "true") === "true";
+// Set VITE_MOCK_API=true in .env.local to use mock mode for UI development
+const MOCK_API = (import.meta.env.VITE_MOCK_API || "false") === "true";
 
 const mockDb = {
   profiles: {},
@@ -98,24 +99,12 @@ async function mockRequest(method, path, payload) {
         handle: "@mock_tiktok",
       };
     }
-    if (platform === "youtube") {
-      mockDb.profiles.youtube = {
-        platform: "youtube",
-        title: "Mock YouTube Channel",
-      };
-    }
     return { ok: true, profile: mockDb.profiles[platform], sid: "mock_sid" };
   }
 
   if (method === "POST" && path === "/api/tiktok/upload") {
     mockDb.stats.uploaded += 1;
     return { status: "uploaded_to_inbox", publish_id: `tt_${Date.now()}` };
-  }
-
-  if (method === "POST" && path === "/api/youtube/upload") {
-    mockDb.stats.published += 1;
-    const id = `yt_${Date.now()}`;
-    return { success: true, publish_id: id, video_id: id, platform: "youtube" };
   }
 
   return { ok: true, mock: true };
@@ -128,8 +117,8 @@ export const api = {
 
   exchangeCode(payload) {
     return MOCK_API
-      ? mockRequest("POST", "/api/exchange", payload)
-      : request("/api/exchange", {
+      ? mockRequest("POST", "/api/oauth/exchange", payload)
+      : request("/api/oauth/exchange", {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -137,8 +126,8 @@ export const api = {
 
   disconnectPlatform(platform) {
     return MOCK_API
-      ? mockRequest("POST", "/api/logout", { platform })
-      : request("/api/logout", {
+      ? mockRequest("POST", "/api/oauth/logout", { platform })
+      : request("/api/oauth/logout", {
           method: "POST",
           body: JSON.stringify({ platform }),
         });
@@ -179,21 +168,6 @@ export const api = {
     const form = new FormData();
     form.append("file", file);
     return request("/api/tiktok/upload", {
-      method: "POST",
-      body: form,
-    });
-  },
-
-  async uploadYouTube({ file, title, description, privacy = "public", tags = "" }) {
-    if (MOCK_API) return mockRequest("POST", "/api/youtube/upload", { fileName: file?.name, title });
-    const form = new FormData();
-    form.append("file", file);
-    form.append("title", title || "");
-    form.append("description", description || "");
-    form.append("privacy", privacy);
-    form.append("tags", tags || "");
-
-    return request("/api/youtube/upload", {
       method: "POST",
       body: form,
     });

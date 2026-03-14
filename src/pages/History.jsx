@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import SectionCard from "../components/SectionCard";
+import { useI18n } from "../hooks/useI18n";
 import { api } from "../lib/api";
 
-function statusBadge(type) {
-  if (type === "published") return <span className="badge badge-success">Опубликовано</span>;
-  if (type === "uploaded") return <span className="badge badge-warning">Загружено</span>;
-  if (type === "scheduled") return <span className="badge badge-warning">Запланировано</span>;
-  return <span className="badge badge-danger">Ошибка</span>;
-}
-
 export default function History() {
+  const { t } = useI18n();
   const [videos, setVideos] = useState([]);
   const [stats, setStats] = useState(null);
+
+  function statusBadge(type) {
+    if (type === "published") return <span className="badge badge-success">{t("dash_published")}</span>;
+    if (type === "uploaded") return <span className="badge badge-warning">{t("dash_uploaded")}</span>;
+    if (type === "scheduled") return <span className="badge badge-warning">{t("dash_scheduled")}</span>;
+    return <span className="badge badge-danger">{t("dash_errors")}</span>;
+  }
 
   useEffect(() => {
     async function load() {
@@ -33,31 +35,31 @@ export default function History() {
 
   return (
     <>
-      <h1 className="page-title">История</h1>
-      <p className="page-subtitle">Лента публикаций и статусов задач.</p>
+      <h1 className="page-title">{t("hist_title")}</h1>
+      <p className="page-subtitle">{t("hist_subtitle")}</p>
 
       <section className="grid-4">
         <div className="stat-card">
-          <div className="stat-label">Загружено</div>
+          <div className="stat-label">{t("dash_uploaded")}</div>
           <div className="stat-value">{stats?.uploaded ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Опубликовано</div>
+          <div className="stat-label">{t("dash_published")}</div>
           <div className="stat-value">{stats?.published ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Запланировано</div>
+          <div className="stat-label">{t("dash_scheduled")}</div>
           <div className="stat-value">{stats?.scheduled ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Ошибки</div>
+          <div className="stat-label">{t("dash_errors")}</div>
           <div className="stat-value">{stats?.errors ?? 0}</div>
         </div>
       </section>
 
       <div style={{ height: 16 }} />
 
-      <SectionCard title="Последние публикации">
+      <SectionCard title={t("hist_recent_videos") || t("hist_title")}>
         <div className="list">
           {!videos.length ? (
             <div className="empty-state" style={{ padding: "32px 0" }}>
@@ -66,8 +68,7 @@ export default function History() {
                 <line x1="8" y1="21" x2="16" y2="21"/>
                 <line x1="12" y1="17" x2="12" y2="21"/>
               </svg>
-              <h3>Нет публикаций</h3>
-              <p>Загрузите первое видео — оно появится здесь</p>
+              <h3>{t("hist_no_videos")}</h3>
             </div>
           ) : (
             videos
@@ -76,13 +77,12 @@ export default function History() {
               .map((item) => (
                 <article key={item.id} className="history-card">
                   <div className="row-between">
-                    <strong style={{ fontSize: 15 }}>{item.name || "Без названия"}</strong>
+                    <strong style={{ fontSize: 15 }}>{item.name || "—"}</strong>
                     {statusBadge(item.status)}
                   </div>
                   <div className="history-meta">
                     {item.publishId && <span>ID: {item.publishId}</span>}
-                    {item.projectId && <span>Проект: {item.projectId}</span>}
-                    {item.createdAt && <span>{new Date(item.createdAt).toLocaleDateString("ru-RU")}</span>}
+                    {item.createdAt && <span>{new Date(item.createdAt).toLocaleDateString()}</span>}
                   </div>
                 </article>
               ))
