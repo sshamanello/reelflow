@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { validateOAuthState, getCodeVerifier } from "../lib/oauth";
 
+const APP_BASE = import.meta.env.VITE_APP_BASE || window.location.origin;
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -10,7 +12,8 @@ export default function AuthCallback() {
 
   useEffect(() => {
     async function run() {
-      const platform = searchParams.get("platform");
+      const platform = searchParams.get("platform") || sessionStorage.getItem("rf_oauth_platform");
+      sessionStorage.removeItem("rf_oauth_platform");
       const code = searchParams.get("code");
       const state = searchParams.get("state");
       const error = searchParams.get("error");
@@ -32,7 +35,7 @@ export default function AuthCallback() {
       }
 
       try {
-        const redirect_uri = `${window.location.origin}/auth/callback?platform=${platform}`;
+        const redirect_uri = APP_BASE;
         const code_verifier = getCodeVerifier(platform);
 
         await api.exchangeCode({

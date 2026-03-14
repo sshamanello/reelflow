@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
@@ -26,34 +26,45 @@ function GuestRoute({ children }) {
   return children;
 }
 
+// Перехватывает OAuth redirect на корневой маршрут (TikTok редиректит на /reelflow?code=...)
+function OAuthInterceptor({ children }) {
+  const [searchParams] = useSearchParams();
+  if (searchParams.get("code")) {
+    return <AuthCallback />;
+  }
+  return children;
+}
+
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public */}
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-      <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+    <OAuthInterceptor>
+      <Routes>
+        {/* Public */}
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
-      {/* OAuth callback — accessible without user auth */}
-      <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* OAuth callback — accessible without user auth */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Protected app */}
-      <Route
-        path="/"
-        element={<ProtectedRoute><Layout /></ProtectedRoute>}
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="history" element={<History />} />
-        <Route path="post" element={<Post />} />
-        <Route path="repost" element={<Repost />} />
-        <Route path="accounts" element={<Accounts />} />
-        <Route path="settings" element={<Settings />} />
+        {/* Protected app */}
+        <Route
+          path="/"
+          element={<ProtectedRoute><Layout /></ProtectedRoute>}
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="history" element={<History />} />
+          <Route path="post" element={<Post />} />
+          <Route path="repost" element={<Repost />} />
+          <Route path="accounts" element={<Accounts />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+
+        {/* Root redirect: show landing if not logged in */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-
-      {/* Root redirect: show landing if not logged in */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </OAuthInterceptor>
   );
 }
 

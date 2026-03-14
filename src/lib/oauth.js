@@ -4,7 +4,8 @@ const TIKTOK_CLIENT_KEY = import.meta.env.VITE_TIKTOK_CLIENT_KEY;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export function getCallbackUrl(platform) {
-  return `${APP_BASE}/auth/callback?platform=${platform}`;
+  sessionStorage.setItem("rf_oauth_platform", platform);
+  return APP_BASE;
 }
 
 // PKCE helpers
