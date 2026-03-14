@@ -6,7 +6,7 @@ import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter basename="/reelflow">
+    <BrowserRouter basename="/ReelFlow">
       <App />
     </BrowserRouter>
   </React.StrictMode>
