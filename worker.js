@@ -120,13 +120,14 @@ function normalizeProfile(u = {}) {
 
 /* -------------------- TikTok helpers -------------------- */
 
-async function tiktokTokenByCode(env, { code, redirect_uri }) {
+async function tiktokTokenByCode(env, { code, redirect_uri, code_verifier }) {
   const form = new URLSearchParams();
   form.set("client_key", env.TIKTOK_CLIENT_KEY);
   form.set("client_secret", env.TIKTOK_CLIENT_SECRET);
   form.set("grant_type", "authorization_code");
   form.set("code", code);
   form.set("redirect_uri", redirect_uri);
+  if (code_verifier) form.set("code_verifier", code_verifier);
 
   console.log("Token flow:", "CONFIDENTIAL");
   console.log(
@@ -317,7 +318,7 @@ async function handleExchange(req, env, cors) {
     const body = await req.json();
     console.log("Exchange request body:", JSON.stringify(body));
 
-    const { code, redirect_uri, platform } = body;
+    const { code, redirect_uri, platform, code_verifier } = body;
     if (!code) return json({ error: "missing_code" }, cors, 400);
     if (!redirect_uri) return json({ error: "missing_redirect_uri" }, cors, 400);
     if (!platform) return json({ error: "missing_platform" }, cors, 400);
@@ -333,7 +334,7 @@ async function handleExchange(req, env, cors) {
 
     if (platform === 'tiktok') {
       // 1) обмен кода на токен
-      const token = await tiktokTokenByCode(env, { code, redirect_uri });
+      const token = await tiktokTokenByCode(env, { code, redirect_uri, code_verifier });
       const access_token  = token?.access_token;
       const refresh_token = token?.refresh_token;
       const expires_in    = token?.expires_in || 3600;

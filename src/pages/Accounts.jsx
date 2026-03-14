@@ -39,9 +39,9 @@ export default function Accounts() {
 
   const tiktok = profiles.tiktok;
 
-  function connect() {
+  async function connect() {
     try {
-      const url = buildTikTokOAuthUrl();
+      const url = await buildTikTokOAuthUrl();
       window.location.href = url;
     } catch (e) {
       showToast(e.message);

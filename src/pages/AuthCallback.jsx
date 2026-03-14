@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
-import { validateOAuthState } from "../lib/oauth";
+import { validateOAuthState, getCodeVerifier } from "../lib/oauth";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -33,11 +33,13 @@ export default function AuthCallback() {
 
       try {
         const redirect_uri = `${window.location.origin}/auth/callback?platform=${platform}`;
+        const code_verifier = getCodeVerifier(platform);
 
         await api.exchangeCode({
           platform,
           code,
           redirect_uri,
+          ...(code_verifier ? { code_verifier } : {}),
         });
 
         setStatus("Подключение успешно. Перенаправляем...");

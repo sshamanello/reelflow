@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "worker:dev": "wrangler dev",
+    "worker:dev": "wrangler dev --env dev",
     "worker:dev:production": "wrangler dev --env production",
     "worker:deploy": "wrangler deploy",
     "worker:deploy:prod": "wrangler deploy --env production",

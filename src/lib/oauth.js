@@ -7,15 +7,38 @@ export function getCallbackUrl(platform) {
   return `${APP_BASE}/auth/callback?platform=${platform}`;
 }
 
-export function buildTikTokOAuthUrl() {
+// PKCE helpers
+async function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+export async function buildTikTokOAuthUrl() {
   if (!TIKTOK_CLIENT_KEY) {
     throw new Error("Missing VITE_TIKTOK_CLIENT_KEY");
   }
 
   const redirectUri = getCallbackUrl("tiktok");
   const state = crypto.randomUUID();
+  const codeVerifier = await generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
 
   sessionStorage.setItem("rf_oauth_state_tiktok", state);
+  sessionStorage.setItem("rf_oauth_code_verifier_tiktok", codeVerifier);
 
   const params = new URLSearchParams({
     client_key: TIKTOK_CLIENT_KEY,
@@ -23,6 +46,8 @@ export function buildTikTokOAuthUrl() {
     response_type: "code",
     redirect_uri: redirectUri,
     state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
   });
 
   return `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
@@ -61,4 +86,11 @@ export function validateOAuthState(platform, stateFromUrl) {
   sessionStorage.removeItem(key);
 
   return !!saved && saved === stateFromUrl;
+}
+
+export function getCodeVerifier(platform) {
+  const key = `rf_oauth_code_verifier_${platform}`;
+  const val = sessionStorage.getItem(key);
+  sessionStorage.removeItem(key);
+  return val;
 }
