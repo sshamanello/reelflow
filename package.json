@@ -1,17 +1,18 @@
 {
-  "name": "reelflow-worker",
+  "name": "reelflow",
   "version": "1.0.0",
   "description": "ReelFlow - Multi-platform content automation platform",
-  "main": "worker.js",
+  "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "dev:production": "wrangler dev --env production",
-    "deploy": "wrangler deploy",
-    "deploy:prod": "wrangler deploy --env production",
-    "secrets": "upload-secrets.bat",
-    "secret:prod": "echo 'Usage: npm run secret:prod <SECRET_NAME>' && wrangler secret put",
-    "tail": "wrangler tail",
-    "login": "wrangler login"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "worker:dev": "wrangler dev",
+    "worker:dev:production": "wrangler dev --env production",
+    "worker:deploy": "wrangler deploy",
+    "worker:deploy:prod": "wrangler deploy --env production",
+    "worker:tail": "wrangler tail",
+    "worker:login": "wrangler login"
   },
   "keywords": [
     "cloudflare",
@@ -22,7 +23,14 @@
   ],
   "author": "sshamanello",
   "license": "MIT",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1"
+  },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^5.4.19",
     "wrangler": "^4.61.1"
   }
 }

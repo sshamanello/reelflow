@@ -57,10 +57,18 @@ export default function History() {
 
       <div style={{ height: 16 }} />
 
-      <SectionCard title="Последние действия">
+      <SectionCard title="Последние публикации">
         <div className="list">
           {!videos.length ? (
-            <div className="muted">Пока нет записей.</div>
+            <div className="empty-state" style={{ padding: "32px 0" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ margin: "0 auto 12px", display: "block", color: "var(--muted)", opacity: 0.4 }}>
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              <h3>Нет публикаций</h3>
+              <p>Загрузите первое видео — оно появится здесь</p>
+            </div>
           ) : (
             videos
               .slice()
@@ -68,13 +76,13 @@ export default function History() {
               .map((item) => (
                 <article key={item.id} className="history-card">
                   <div className="row-between">
-                    <strong>{item.name || "Untitled"}</strong>
+                    <strong style={{ fontSize: 15 }}>{item.name || "Без названия"}</strong>
                     {statusBadge(item.status)}
                   </div>
                   <div className="history-meta">
-                    <span>ID: {item.publishId || "—"}</span>
-                    <span>Проект: {item.projectId || "—"}</span>
-                    <span>Дата: {item.createdAt || "—"}</span>
+                    {item.publishId && <span>ID: {item.publishId}</span>}
+                    {item.projectId && <span>Проект: {item.projectId}</span>}
+                    {item.createdAt && <span>{new Date(item.createdAt).toLocaleDateString("ru-RU")}</span>}
                   </div>
                 </article>
               ))

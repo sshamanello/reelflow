@@ -6,21 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ReelFlow is a multi-platform content automation platform built with Cloudflare Workers. It allows users to manage and publish content across TikTok and YouTube using OAuth 2.0 authentication.
 
-**Architecture**: Single-page application (vanilla JS) + Cloudflare Worker backend + Cloudflare KV storage
+**Architecture**: React SPA (Vite) + Cloudflare Worker backend + Cloudflare KV storage
 
 ## Development Commands
 
-### Local Development
+### Frontend (Vite React)
 ```bash
-npm run dev              # Start local dev server on port 8787
-npm run login            # Authenticate with Cloudflare
-npm run tail             # View real-time logs from production
+npm run dev              # Start Vite dev server (React UI)
+npm run build            # Build frontend
+npm run preview          # Preview production build
+```
+
+### Worker (Cloudflare)
+```bash
+npm run worker:dev       # Start worker dev server on port 8787
+npm run worker:login     # Authenticate with Cloudflare
+npm run worker:tail      # View real-time logs from production
 ```
 
 ### Deployment
 ```bash
-npm run deploy           # Deploy to development environment
-npm run deploy:prod      # Deploy to production
+npm run worker:deploy           # Deploy worker to development environment
+npm run worker:deploy:prod      # Deploy worker to production
 ```
 
 ### Secret Management
@@ -35,9 +42,9 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET --env production
 
 ## Architecture
 
-### Frontend (`reelflow.html`)
-- Single-page application with vanilla JavaScript (no build tools)
-- Tailwind CSS via CDN for styling
+### Frontend (`src/`)
+- React SPA built with Vite
+- Entry point: `index.html` + `src/main.jsx`
 - `config.js` contains OAuth client keys (public-facing)
 - OAuth flow using popup windows with `postMessage` communication
 - API calls to backend at `API_BASE` (auto-detected: localhost for dev, worker URL for prod)
@@ -112,12 +119,14 @@ The `SESSIONS` binding in `wrangler.toml` points to a Cloudflare KV namespace. C
 
 ## File Structure
 
-- `reelflow.html` - Main SPA
+- `src/` - React frontend (pages, components, hooks, lib)
+- `index.html` - Vite entry point
+- `vite.config.js` - Vite configuration
 - `worker.js` - Cloudflare Worker (all API logic)
 - `config.js` - Frontend configuration (OAuth keys)
 - `wrangler.toml` - Cloudflare Worker config
 - `.dev.vars` - Local development secrets (gitignored)
-- `test_oauth.html` - OAuth testing page
+- `reelflow.html` - Legacy vanilla JS SPA
 - `v1.html` - Previous app version (legacy)
 
 ## Quick Context Reference

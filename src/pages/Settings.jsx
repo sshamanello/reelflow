@@ -64,11 +64,24 @@ export default function Settings() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Compliance">
-        <div className="notice">
-          <strong>Что ещё обязательно добить:</strong><br />
-          Privacy Policy, Terms of Service, Delete User Data page, объяснение scopes для TikTok и Google,
-          и нормальный экран “зачем мы просим этот доступ”.
+      <SectionCard title="Конфиденциальность и данные">
+        <div className="kv">
+          <div>
+            <strong>Данные аккаунта</strong>
+            <span>Хранятся в зашифрованном Cloudflare KV</span>
+          </div>
+          <div>
+            <strong>OAuth токены</strong>
+            <span>Только на серверной стороне, никогда в браузере</span>
+          </div>
+          <div>
+            <strong>Удаление данных</strong>
+            <span>Отключите аккаунты на странице Аккаунты для очистки токенов</span>
+          </div>
+        </div>
+        <div style={{ marginTop: 16 }} className="notice notice-info">
+          ReelFlow запрашивает только необходимые права: загрузка видео и базовая информация профиля.
+          Мы не читаем и не храним ваш контент.
         </div>
       </SectionCard>
     </>
