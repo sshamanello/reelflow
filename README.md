@@ -1,243 +1,141 @@
-# 🎬 ReelFlow
+# ReelFlow
 
-> Multi-platform content automation platform for creators
+Платформа для автоматизации публикации контента на TikTok. Регистрируйся, подключай аккаунт и публикуй видео.
 
-[![TikTok](https://img.shields.io/badge/TikTok-000000?style=for-the-badge&logo=tiktok&logoColor=white)](https://www.tiktok.com)
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
+[![CI](https://github.com/sshamanello/reelflow/actions/workflows/deploy.yml/badge.svg)](https://github.com/sshamanello/reelflow/actions/workflows/deploy.yml)
 
-**ReelFlow** — это платформа для автоматизации публикации контента на нескольких платформах. Загружайте видео один раз и публикуйте на TikTok и YouTube без лишних усилий.
+**Live:** [sshamanello.ru](https://sshamanello.ru)
 
-## ✨ Возможности
+## Стек
 
-- 🎥 **Загрузка видео** — загружайте видео один раз, публикуйте везде
-- 📊 **Аналитика** — отслеживайте статистику по всем платформам в одном месте
-- 🗓️ **Планировщик** — создавайте контент заранее и публикуйте в удобное время
-- 🔐 **Безопасная авторизация** — OAuth 2.0 для TikTok и YouTube
-- 🌙 **Темная тема** — удобный интерфейс в любое время суток
-- 📱 **Адаптивный дизайн** — работает на всех устройствах
+- **Frontend:** React 18 + Vite + React Router v6
+- **Backend:** Cloudflare Workers
+- **База данных:** Cloudflare KV
+- **Auth:** email/пароль (PBKDF2) + сессии через HttpOnly cookie
+- **OAuth:** TikTok OAuth 2.0 с PKCE (S256)
+- **CI/CD:** GitHub Actions → Cloudflare Workers + reg.ru (FTPS)
 
-## 🚀 Быстрый старт
+## Локальный запуск
 
 ### Требования
 
-- Node.js 22+
-- Аккаунт Cloudflare с планом Workers Paid
-- TikTok для разработчиков API ключ
-- Google Cloud проект с YouTube Data API v3
+- Node.js 20+
+- Аккаунт Cloudflare (бесплатный)
+- TikTok Developer аккаунт с приложением
 
 ### Установка
 
 ```bash
-# Клонируйте репозиторий
 git clone https://github.com/sshamanello/reelflow.git
 cd reelflow
-
-# Установите зависимости
 npm install
 ```
 
 ### Конфигурация
 
-```bash
-# Скопируйте файл переменных окружения
-cp .env.example .env
+Создай файл `.dev.vars` в корне проекта:
 
-# Отредактируйте .env с вашими ключами
-# TIKTOK_CLIENT_KEY=ваш_ключ
-# TIKTOK_CLIENT_SECRET=ваш_секрет
-# GOOGLE_CLIENT_ID=ваш_id
-# GOOGLE_CLIENT_SECRET=ваш_секрет
+```
+TIKTOK_CLIENT_KEY=твой_ключ
+TIKTOK_CLIENT_SECRET=твой_секрет
+COOKIE_NAME=rf_sid
+COOKIE_TTL_DAYS=30
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
-### Локальный запуск
+### Запуск
 
 ```bash
-# Запустите dev сервер
+# Терминал 1 — Worker (порт 8787)
+npm run worker:dev
+
+# Терминал 2 — Frontend (порт 5173)
 npm run dev
-
-# Откройте http://localhost:8787
 ```
 
-## 📦 Деплой
+Открой [http://localhost:5173](http://localhost:5173)
 
-### Продакшн
+> Vite автоматически проксирует `/api/*` на `localhost:8787`
+
+## Деплой
+
+Деплой происходит автоматически через GitHub Actions:
+
+| Ветка | Что деплоится |
+|---|---|
+| `develop` | Worker → staging (reelflow-worker-dev.sshamanello.workers.dev) |
+| `main` | Worker → production + Frontend → sshamanello.ru |
+
+### Настройка CI/CD (GitHub Secrets)
+
+Добавь в **Settings → Secrets and variables → Actions**:
+
+| Secret | Описание |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | API токен с правами Edit Workers + KV Storage |
+| `CLOUDFLARE_ACCOUNT_ID` | ID аккаунта Cloudflare |
+| `TIKTOK_CLIENT_KEY` | TikTok client key |
+| `TIKTOK_CLIENT_SECRET` | TikTok client secret |
+| `REGRU_HOST` | Хост FTP на reg.ru |
+| `REGRU_USER` | Логин FTP |
+| `REGRU_PASSWORD` | Пароль FTP |
+| `REGRU_PATH` | Путь к папке сайта |
+
+### Ручной деплой
 
 ```bash
-# Деплой на Cloudflare Workers
-npm run deploy:prod
-```
+# Worker в dev окружение
+npm run worker:deploy
 
-### Управление секретами
+# Worker в production
+npm run worker:deploy:prod
 
-```bash
-# Установите секреты для production
+# Установка секретов для production
 npx wrangler secret put TIKTOK_CLIENT_KEY --env production
 npx wrangler secret put TIKTOK_CLIENT_SECRET --env production
-npx wrangler secret put GOOGLE_CLIENT_ID --env production
-npx wrangler secret put GOOGLE_CLIENT_SECRET --env production
 ```
 
-## 🏗️ Архитектура
+## Архитектура
 
 ```
-┌─────────────────┐      ┌──────────────────┐      ┌─────────────┐
-│   Frontend      │──────▶│  Cloudflare      │──────▶│   TikTok    │
-│  (reelflow.html) │      │  Worker API      │      │     API     │
-└─────────────────┘      └──────────────────┘      └─────────────┘
-                                │
-                                ▼
-                         ┌─────────────┐
-                         │   YouTube   │
-                         │     API     │
-                         └─────────────┘
+┌─────────────────────┐     ┌──────────────────────┐
+│  React SPA (Vite)   │────▶│  Cloudflare Worker   │
+│  sshamanello.ru     │     │  worker.js           │
+└─────────────────────┘     └──────────┬───────────┘
+                                       │
+                              ┌────────▼────────┐
+                              │  Cloudflare KV  │
+                              │  (sessions,     │
+                              │   users,tokens) │
+                              └─────────────────┘
 ```
 
-### Технологии
+### OAuth Flow (TikTok PKCE)
 
-**Фронтенд:**
-- React 18 (via CDN)
-- Tailwind CSS
-- Vanilla JavaScript (no build step)
+1. Frontend генерирует `code_verifier` + `code_challenge` (SHA-256)
+2. Пользователь авторизуется на TikTok
+3. TikTok редиректит на `/auth/callback?code=...`
+4. Frontend отправляет `code` + `code_verifier` на worker
+5. Worker меняет код на access token, сохраняет в KV
 
-**Бэкенд:**
-- Cloudflare Workers
-- Cloudflare KV Storage
-- OAuth 2.0
+## API
 
-## 📸 Скриншоты
+```
+POST /api/auth/register    { email, password }
+POST /api/auth/login       { email, password }
+POST /api/auth/logout
+GET  /api/auth/me
 
-### Дашборд
-Статистика по всем вашим платформам в одном месте
+POST /api/oauth/exchange   { platform, code, redirect_uri, code_verifier }
 
-### Загрузка видео
-Простой процесс загрузки в 4 шага
-
-### Настройки
-Управление подключенными аккаунтами
-
-## 🔧 Доступные команды
-
-```bash
-npm run dev          # Локальный dev сервер (port 8787)
-npm run login        # Авторизация в Cloudflare
-npm run tail         # Логи продакшена в реальном времени
-npm run deploy       # Деплой в dev окружение
-npm run deploy:prod  # Деплой в production
+GET  /api/projects
+POST /api/projects
+GET  /api/videos
+POST /api/videos
+GET  /api/stats
+GET  /health
 ```
 
-## 📖 API Документация
+## Лицензия
 
-### Аутентификация
-
-**Получить профиль пользователя**
-```http
-GET /api/me
-Authorization: Bearer <session_id>
-```
-
-**Обмен OAuth кода**
-```http
-POST /api/oauth/exchange
-Content-Type: application/json
-
-{
-  "platform": "tiktok",
-  "code": "authorization_code",
-  "redirect_uri": "https://yourdomain.com/callback"
-}
-```
-
-### Загрузка видео
-
-**Загрузить на TikTok**
-```http
-POST /api/tiktok/upload
-Authorization: Bearer <session_id>
-Content-Type: multipart/form-data
-
-file: <video>
-```
-
-## 🔐 Безопасность
-
-- Все токены хранятся в зашифрованном Cloudflare KV
-- HTTP-only cookies для сессий
-- CSRF защита через state параметр
-- CORS настроен для вашего домена
-
-## 🤝 Участие в разработке
-
-Мы будем рады вашим вкладам! Не стесняйтесь создавать fork и отправлять pull requests.
-
-1. Fork проект
-2. Создайте ветку для фичи (`git checkout -b feature/AmazingFeature`)
-3. Закоммитьте изменения (`git commit -m 'Add some AmazingFeature'`)
-4. Запушьте в ветку (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
-
-## 📝 Лицензия
-
-Этот проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
-
-## 👨‍💻 Автор
-
-**Sshamanello**
-- Website: [sshamanello.ru](https://sshamanello.ru)
-- GitHub: [@sshamanello](https://github.com/sshamanello)
-
-## 🙏 Благодарности
-
-- [Cloudflare Workers](https://workers.cloudflare.com/) — серверless платформа
-- [TikTok for Developers](https://developers.tiktok.com/) — API документация
-- [YouTube Data API v3](https://developers.google.com/youtube/v3) — API документация
-
-## 🗺️ Roadmap
-
-### В планах (v2.0)
-
-#### 👥 Многопользовательская система
-Добавление полноценной системы регистрации и авторизации пользователей:
-
-- 📧 **Email + Пароль авторизация** — классический вход с email и паролем
-- 🔐 **Безопасное хеширование** — PBKDF2 с 100,000 итераций
-- 👤 **Профиль пользователя** — персональные настройки для каждого пользователя
-- 🔗 **Независимые аккаунты** — каждый пользователь видит только свои платформы
-- 💾 **Персистентность данных** — доступ к аккаунтам с любого устройства
-
-**Архитектура:**
-```
-users:${user_id}              → Профиль пользователя
-users:email:${email}          → Индекс для быстрого поиска
-sessions:${session_id}        → Сессия авторизации
-tokens:tiktok:${user_id}     → Токены TikTok пользователя
-tokens:youtube:${user_id}    → Токены YouTube пользователя
-projects:${user_id}          → Проекты пользователя
-videos:${user_id}            → Видео пользователя
-```
-
-**API эндпоинты:**
-- `POST /api/auth/register` — Регистрация
-- `POST /api/auth/login` — Вход
-- `GET /api/auth/me` — Текущий пользователь
-- `POST /api/auth/logout` — Выход
-
-#### 🔐 OAuth вход (будущее)
-Возможность входа через TikTok или Google аккаунт без пароля.
-
-#### 📧 Восстановление пароля
-Система сброса пароля через email.
-
----
-
-### Текущие ограничения
-
-- ❌ Только один пользователь на систему
-- ❌ Данные привязаны к браузеру (session ID)
-- ❌ Нет доступа к аккаунтам с других устройств
-
----
-
-**Создано с ❤️ для контент-креаторов**
-
-Если вам понравился проект, поставьте ⭐️ на GitHub!
+MIT
