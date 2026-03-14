@@ -1,0 +1,123 @@
+# ================================================================
+# ReelFlow — GitLab CI/CD Pipeline
+# ================================================================
+#
+# Stages:
+#   build   → vite build (все нужные ветки)
+#   deploy  → деплой воркера и фронтенда (только main/develop)
+#
+# Переменные GitLab (Settings → CI/CD → Variables):
+#
+#   CLOUDFLARE_API_TOKEN   — токен Cloudflare (Workers + Pages)
+#   CLOUDFLARE_ACCOUNT_ID  — ID аккаунта Cloudflare
+#   TIKTOK_CLIENT_KEY      — TikTok OAuth client key
+#   TIKTOK_CLIENT_SECRET   — TikTok OAuth client secret
+#
+#   REGRU_HOST             — сервер reg.ru (напр. server279.hosting.reg.ru)
+#   REGRU_USER             — логин FTP/SSH (напр. sshamanello)
+#   REGRU_PASSWORD         — пароль FTP
+#   REGRU_PATH             — путь на сервере (напр. /www/sshamanello.ru)
+#
+# ================================================================
+
+image: node:20-alpine
+
+stages:
+  - build
+  - deploy
+
+# ── Кэш node_modules ──────────────────────────────────────────
+.node_cache: &node_cache
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull-push
+
+# ================================================================
+# STAGE: build
+# ================================================================
+
+build:
+  stage: build
+  <<: *node_cache
+  script:
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# ================================================================
+# STAGE: deploy — develop → staging worker
+# ================================================================
+
+deploy:worker:staging:
+  stage: deploy
+  image: node:20-alpine
+  <<: *node_cache
+  needs: [build]
+  environment:
+    name: staging
+    url: https://reelflow-worker-dev.sshamanello.workers.dev
+  script:
+    - npm ci --prefer-offline
+    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env dev
+    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env dev
+    - npx wrangler deploy --env dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# ================================================================
+# STAGE: deploy — main → production worker + reg.ru frontend
+# ================================================================
+
+deploy:worker:production:
+  stage: deploy
+  image: node:20-alpine
+  <<: *node_cache
+  needs: [build]
+  environment:
+    name: production/worker
+    url: https://reelflow-worker.sshamanello.workers.dev
+  script:
+    - npm ci --prefer-offline
+    - echo "$TIKTOK_CLIENT_KEY"    | npx wrangler secret put TIKTOK_CLIENT_KEY    --env production
+    - echo "$TIKTOK_CLIENT_SECRET" | npx wrangler secret put TIKTOK_CLIENT_SECRET --env production
+    - npx wrangler deploy --env production
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+deploy:frontend:regru:
+  stage: deploy
+  image: alpine:latest
+  needs: [build]
+  environment:
+    name: production/frontend
+    url: https://sshamanello.ru
+  before_script:
+    - apk add --no-cache lftp
+  script:
+    # Загружаем dist/ на reg.ru через FTPS
+    - |
+      lftp -c "
+        set ftps:initial-prot '';
+        set ftp:ssl-force true;
+        set ftp:ssl-protect-data true;
+        set ssl:verify-certificate false;
+        open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST;
+        mirror --reverse --delete --verbose
+          --exclude .git/
+          --exclude .gitignore
+          dist/ $REGRU_PATH/;
+        quit
+      "
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'

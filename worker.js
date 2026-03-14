@@ -2,6 +2,25 @@
 
 /* -------------------- utils -------------------- */
 
+// Password hashing via Web Crypto (PBKDF2)
+async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+    keyMaterial, 256
+  );
+  return b64url(new Uint8Array(bits));
+}
+
+async function verifyPassword(password, salt, hash) {
+  const h = await hashPassword(password, salt);
+  return h === hash;
+}
+
+
 function makeCORS(env, origin) {
   // Используем ALLOWED_ORIGINS из wrangler.toml или значение по умолчанию
   const allowed = env.ALLOWED_ORIGINS || "https://sshamanello.ru";
@@ -101,13 +120,14 @@ function normalizeProfile(u = {}) {
 
 /* -------------------- TikTok helpers -------------------- */
 
-async function tiktokTokenByCode(env, { code, redirect_uri }) {
+async function tiktokTokenByCode(env, { code, redirect_uri, code_verifier }) {
   const form = new URLSearchParams();
   form.set("client_key", env.TIKTOK_CLIENT_KEY);
   form.set("client_secret", env.TIKTOK_CLIENT_SECRET);
   form.set("grant_type", "authorization_code");
   form.set("code", code);
   form.set("redirect_uri", redirect_uri);
+  if (code_verifier) form.set("code_verifier", code_verifier);
 
   console.log("Token flow:", "CONFIDENTIAL");
   console.log(
@@ -298,7 +318,7 @@ async function handleExchange(req, env, cors) {
     const body = await req.json();
     console.log("Exchange request body:", JSON.stringify(body));
 
-    const { code, redirect_uri, platform } = body;
+    const { code, redirect_uri, platform, code_verifier } = body;
     if (!code) return json({ error: "missing_code" }, cors, 400);
     if (!redirect_uri) return json({ error: "missing_redirect_uri" }, cors, 400);
     if (!platform) return json({ error: "missing_platform" }, cors, 400);
@@ -314,7 +334,7 @@ async function handleExchange(req, env, cors) {
 
     if (platform === 'tiktok') {
       // 1) обмен кода на токен
-      const token = await tiktokTokenByCode(env, { code, redirect_uri });
+      const token = await tiktokTokenByCode(env, { code, redirect_uri, code_verifier });
       const access_token  = token?.access_token;
       const refresh_token = token?.refresh_token;
       const expires_in    = token?.expires_in || 3600;
@@ -767,7 +787,8 @@ async function handleYoutubeUpload(req, env, cors) {
 
 async function handleGetProjects(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const projectsKey = `projects:${sid}`;
   const raw = await env.SESSIONS.get(projectsKey);
@@ -778,7 +799,8 @@ async function handleGetProjects(req, env, cors) {
 
 async function handleCreateProject(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const body = await req.json();
   const { name, platforms } = body;
@@ -810,7 +832,8 @@ async function handleCreateProject(req, env, cors) {
 
 async function handleGetVideos(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const videosKey = `videos:${sid}`;
   const raw = await env.SESSIONS.get(videosKey);
@@ -821,7 +844,8 @@ async function handleGetVideos(req, env, cors) {
 
 async function handleSaveVideo(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const body = await req.json();
   const { projectId, videoName, publishId, status } = body;
@@ -864,7 +888,8 @@ async function handleSaveVideo(req, env, cors) {
 
 async function handleGetStats(req, env, cors) {
   const sid = getSidFromReq(req, env);
-  if (!sid) return json({ error: "unauthorized" }, cors, 401);
+  const sess = await getSession(env, sid);
+  if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
   const videosKey = `videos:${sid}`;
   const raw = await env.SESSIONS.get(videosKey);
@@ -883,6 +908,114 @@ async function handleGetStats(req, env, cors) {
   }, cors, 200);
 }
 
+/* -------------------- user auth -------------------- */
+
+async function handleRegister(req, env, cors) {
+  try {
+    const body = await req.json();
+    const { email, password, name } = body;
+
+    if (!email || !password) return json({ error: "missing_fields" }, cors, 400);
+    if (password.length < 6) return json({ error: "password_too_short" }, cors, 400);
+
+    const emailKey = `user:email:${email.toLowerCase().trim()}`;
+    const existing = await env.SESSIONS.get(emailKey);
+    if (existing) return json({ error: "email_taken" }, cors, 409);
+
+    const userId = await randomId(16);
+    const salt = await randomId(16);
+    const pwHash = await hashPassword(password, salt);
+
+    const user = {
+      id: userId,
+      email: email.toLowerCase().trim(),
+      name: name || email.split("@")[0],
+      salt,
+      pwHash,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Store user record
+    await env.SESSIONS.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 60 * 60 * 24 * 365 });
+    // Store email -> userId index
+    await env.SESSIONS.put(emailKey, userId, { expirationTtl: 60 * 60 * 24 * 365 });
+
+    // Create session
+    const sid = await randomId();
+    const sess = { userId, email: user.email, name: user.name };
+    await putSession(env, sid, sess);
+
+    return new Response(JSON.stringify({ ok: true, user: { id: userId, email: user.email, name: user.name }, sid }), {
+      status: 200,
+      headers: {
+        ...cors,
+        "Content-Type": "application/json",
+        "Set-Cookie": cookieSerialize(env.COOKIE_NAME || "rf_sid", sid, Number(env.COOKIE_TTL_DAYS || 30)),
+      },
+    });
+  } catch (e) {
+    console.error("Register error:", e);
+    return json({ error: "server_error", message: e.message }, cors, 500);
+  }
+}
+
+async function handleLogin(req, env, cors) {
+  try {
+    const body = await req.json();
+    const { email, password } = body;
+    if (!email || !password) return json({ error: "missing_fields" }, cors, 400);
+
+    const emailKey = `user:email:${email.toLowerCase().trim()}`;
+    const userId = await env.SESSIONS.get(emailKey);
+    if (!userId) return json({ error: "invalid_credentials" }, cors, 401);
+
+    const userRaw = await env.SESSIONS.get(`user:${userId}`);
+    if (!userRaw) return json({ error: "invalid_credentials" }, cors, 401);
+
+    const user = JSON.parse(userRaw);
+    const valid = await verifyPassword(password, user.salt, user.pwHash);
+    if (!valid) return json({ error: "invalid_credentials" }, cors, 401);
+
+    const sid = await randomId();
+    const sess = { userId: user.id, email: user.email, name: user.name };
+    await putSession(env, sid, sess);
+
+    return new Response(JSON.stringify({ ok: true, user: { id: user.id, email: user.email, name: user.name }, sid }), {
+      status: 200,
+      headers: {
+        ...cors,
+        "Content-Type": "application/json",
+        "Set-Cookie": cookieSerialize(env.COOKIE_NAME || "rf_sid", sid, Number(env.COOKIE_TTL_DAYS || 30)),
+      },
+    });
+  } catch (e) {
+    console.error("Login error:", e);
+    return json({ error: "server_error", message: e.message }, cors, 500);
+  }
+}
+
+async function handleUserLogout(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  if (sid) {
+    await env.SESSIONS.delete(`sid:${sid}`);
+  }
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      ...cors,
+      "Content-Type": "application/json",
+      "Set-Cookie": `${env.COOKIE_NAME || "rf_sid"}=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0`,
+    },
+  });
+}
+
+async function handleGetUser(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess || !sess.userId) return json({ error: "unauthorized" }, cors, 401);
+  return json({ user: { id: sess.userId, email: sess.email, name: sess.name } }, cors, 200);
+}
+
 /* -------------------- router -------------------- */
 
 export default {
@@ -897,11 +1030,25 @@ export default {
         return json({ ok: true }, cors);
       }
 
+      // User Auth
+      if (url.pathname === "/api/auth/register" && req.method === "POST") {
+        return await handleRegister(req, env, cors);
+      }
+      if (url.pathname === "/api/auth/login" && req.method === "POST") {
+        return await handleLogin(req, env, cors);
+      }
+      if (url.pathname === "/api/auth/logout" && req.method === "POST") {
+        return await handleUserLogout(req, env, cors);
+      }
+      if (url.pathname === "/api/auth/me" && req.method === "GET") {
+        return await handleGetUser(req, env, cors);
+      }
+
       // OAuth (unified for both platforms)
-      if (url.pathname === "/api/oauth/exchange" && req.method === "POST") {
+      if ((url.pathname === "/api/oauth/exchange" || url.pathname === "/api/exchange") && req.method === "POST") {
         return await handleExchange(req, env, cors);
       }
-      if (url.pathname === "/api/oauth/logout" && req.method === "POST") {
+      if ((url.pathname === "/api/oauth/logout" || url.pathname === "/api/logout") && req.method === "POST") {
         return await handleLogout(req, env, cors);
       }
       if (url.pathname === "/api/me" && req.method === "GET") {
