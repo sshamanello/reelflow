@@ -1211,10 +1211,8 @@ button, input, textarea, select { font: inherit; }
 
 .video-preview {
   width: 100%;
-  max-height: 280px;
   display: block;
-  object-fit: contain;
-  background: #000;
+  object-fit: cover;
 }
 
 .video-preview-footer {
@@ -1255,4 +1253,61 @@ button, input, textarea, select { font: inherit; }
 
 .sidebar-legal a:hover {
   text-decoration: underline;
+}
+
+/* ─── Thumbnail picker ────────────────────────────────────── */
+.thumbnail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.thumbnail-preview-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbnail-preview {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.thumbnail-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--danger, #e53e3e);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0;
+}
+
+.thumbnail-empty {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.thumbnail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

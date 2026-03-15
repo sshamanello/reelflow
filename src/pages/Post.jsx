@@ -13,10 +13,14 @@ export default function Post() {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [thumbnail, setThumbnail] = useState(null); // { url, blob }
   const [uploading, setUploading] = useState(false);
   const [tiktokProfile, setTiktokProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const fileInputRef = useRef(null);
+  const thumbInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     api.getMe().then(data => {
@@ -28,10 +32,35 @@ export default function Post() {
     setFile(f);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(f ? URL.createObjectURL(f) : null);
+    setThumbnail(null);
+  }
+
+  function captureFrame() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      setThumbnail({ url, blob });
+    }, "image/jpeg", 0.92);
+  }
+
+  function handleThumbUpload(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (thumbnail?.url) URL.revokeObjectURL(thumbnail.url);
+    setThumbnail({ url: URL.createObjectURL(f), blob: f });
   }
 
   useEffect(() => {
-    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (thumbnail?.url) URL.revokeObjectURL(thumbnail.url);
+    };
   }, []);
 
   async function handlePublishNow() {
@@ -69,10 +98,12 @@ export default function Post() {
             {previewUrl ? (
               <div className="video-preview-wrap">
                 <video
+                  ref={videoRef}
                   src={previewUrl}
                   controls
                   className="video-preview"
                 />
+                <canvas ref={canvasRef} style={{ display: "none" }} />
                 <div className="video-preview-footer">
                   <span className="video-preview-name">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,22 +113,16 @@ export default function Post() {
                   </span>
                   <button
                     className="btn btn-sm btn-ghost"
-                    onClick={() => { handleFileChange(null); fileInputRef.current?.click(); }}
+                    onClick={() => { handleFileChange(null); }}
                   >
                     {t("post_change_file")}
                   </button>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                />
               </div>
             ) : (
               <label className="upload-zone">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="video/*"
                   onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
@@ -111,6 +136,47 @@ export default function Post() {
                 <div className="upload-text">{t("post_drop_hint")}</div>
                 <div className="upload-subtext">{t("post_drop_sub")}</div>
               </label>
+            )}
+
+            {/* Обложка */}
+            {previewUrl && (
+              <div>
+                <label className="label">{t("post_thumbnail")}</label>
+                <div className="thumbnail-row">
+                  {thumbnail ? (
+                    <div className="thumbnail-preview-wrap">
+                      <img src={thumbnail.url} alt="thumbnail" className="thumbnail-preview" />
+                      <button
+                        className="thumbnail-remove"
+                        onClick={() => { URL.revokeObjectURL(thumbnail.url); setThumbnail(null); }}
+                        title="Удалить"
+                      >×</button>
+                    </div>
+                  ) : (
+                    <div className="thumbnail-empty">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div className="thumbnail-actions">
+                    <button className="btn btn-sm btn-ghost" onClick={captureFrame}>
+                      {t("post_capture_frame")}
+                    </button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => thumbInputRef.current?.click()}>
+                      {t("post_upload_thumb")}
+                    </button>
+                    <input
+                      ref={thumbInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleThumbUpload}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
 
             <div>
@@ -150,7 +216,6 @@ export default function Post() {
               </div>
             </div>
 
-            {/* Статус подключённого аккаунта */}
             {profileLoading ? (
               <div className="notice notice-info">{t("loading")}</div>
             ) : tiktokProfile ? (

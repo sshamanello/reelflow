@@ -80,6 +80,9 @@ const translations = {
     post_need_account: "Подключите TikTok аккаунт в разделе Аккаунты, чтобы публиковать видео.",
     post_success: "Видео отправлено в TikTok! Проверьте уведомления в приложении TikTok, чтобы завершить публикацию.",
     post_inbox_notice: "После загрузки видео появится в черновиках TikTok. Откройте уведомление в приложении TikTok чтобы опубликовать.",
+    post_thumbnail: "Обложка",
+    post_capture_frame: "Взять кадр",
+    post_upload_thumb: "Загрузить фото",
 
     // Accounts
     acc_title: "Аккаунты",
@@ -209,6 +212,9 @@ const translations = {
     post_need_account: "Connect your TikTok account in the Accounts section to publish videos.",
     post_success: "Video sent to TikTok! Check notifications in the TikTok app to complete publishing.",
     post_inbox_notice: "After uploading, the video will appear in TikTok drafts. Open the notification in the TikTok app to publish.",
+    post_thumbnail: "Thumbnail",
+    post_capture_frame: "Capture frame",
+    post_upload_thumb: "Upload image",
 
     // Accounts
     acc_title: "Accounts",
