@@ -1,4 +1,4 @@
-﻿import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../hooks/useI18n";
 
@@ -17,12 +17,6 @@ const IconUpload = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
     <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-  </svg>
-);
-const IconRepeat = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
   </svg>
 );
 const IconAccounts = () => (
@@ -67,7 +61,6 @@ export default function Sidebar() {
     { to: "/", label: t("nav_home"), icon: <IconHome />, end: true },
     { to: "/history", label: t("nav_history"), icon: <IconHistory /> },
     { to: "/post", label: t("nav_post"), icon: <IconUpload /> },
-    { to: "/repost", label: t("nav_repost"), icon: <IconRepeat /> },
     { to: "/accounts", label: t("nav_accounts"), icon: <IconAccounts /> },
     { to: "/settings", label: t("nav_settings"), icon: <IconSettings /> },
   ];
@@ -121,6 +114,12 @@ export default function Sidebar() {
           <span className="nav-ico"><IconLogout /></span>
           <span>{t("nav_logout")}</span>
         </button>
+      </div>
+
+      <div className="sidebar-legal">
+        <a href="/terms" target="_blank">Terms</a>
+        <span>·</span>
+        <a href="/privacy" target="_blank">Privacy</a>
       </div>
     </aside>
   );

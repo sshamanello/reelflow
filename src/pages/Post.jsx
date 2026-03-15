@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionCard from "../components/SectionCard";
 import { useAppToast } from "../components/Layout";
@@ -12,16 +12,26 @@ export default function Post() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [tiktokProfile, setTiktokProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     api.getMe().then(data => {
       setTiktokProfile(data?.profiles?.tiktok || null);
-    }).catch(() => {
-      setTiktokProfile(null);
-    }).finally(() => setProfileLoading(false));
+    }).catch(() => setTiktokProfile(null)).finally(() => setProfileLoading(false));
+  }, []);
+
+  function handleFileChange(f) {
+    setFile(f);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(f ? URL.createObjectURL(f) : null);
+  }
+
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
   }, []);
 
   async function handlePublishNow() {
@@ -35,8 +45,8 @@ export default function Post() {
         publishId: res.publish_id,
         status: res.status === "published" ? "published" : "uploaded",
       });
-      showToast(t("post_done") + ": TikTok — " + (res.status || "ok"));
-      setFile(null);
+      showToast(t("post_success"));
+      handleFileChange(null);
       setTitle("");
       setDescription("");
     } catch (e) {
@@ -54,44 +64,54 @@ export default function Post() {
       <section className="grid-2">
         <SectionCard title={t("post_video_file")}>
           <div className="column">
-            <div>
-              {!file ? (
-                <label className="upload-zone">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  />
-                  <svg
-                    width="40" height="40" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="1.5"
-                    style={{ display: "block", color: "var(--muted)", flexShrink: 0 }}
-                  >
-                    <polyline points="16 16 12 12 8 16"/>
-                    <line x1="12" y1="12" x2="12" y2="21"/>
-                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-                  </svg>
-                  <div className="upload-text">{t("post_drop_hint")}</div>
-                  <div className="upload-subtext">{t("post_drop_sub")}</div>
-                </label>
-              ) : (
-                <div>
-                  <div className="upload-selected">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+
+            {/* Превью или зона загрузки */}
+            {previewUrl ? (
+              <div className="video-preview-wrap">
+                <video
+                  src={previewUrl}
+                  controls
+                  className="video-preview"
+                />
+                <div className="video-preview-footer">
+                  <span className="video-preview-name">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
-                    {file.name} ({(file.size / 1024 / 1024).toFixed(1)} МБ)
-                  </div>
+                    {file.name} · {(file.size / 1024 / 1024).toFixed(1)} МБ
+                  </span>
                   <button
                     className="btn btn-sm btn-ghost"
-                    style={{ marginTop: 8 }}
-                    onClick={() => setFile(null)}
+                    onClick={() => { handleFileChange(null); fileInputRef.current?.click(); }}
                   >
                     {t("post_change_file")}
                   </button>
                 </div>
-              )}
-            </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                />
+              </div>
+            ) : (
+              <label className="upload-zone">
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                />
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                  style={{ display: "block", color: "var(--muted)", flexShrink: 0 }}>
+                  <polyline points="16 16 12 12 8 16"/>
+                  <line x1="12" y1="12" x2="12" y2="21"/>
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                </svg>
+                <div className="upload-text">{t("post_drop_hint")}</div>
+                <div className="upload-subtext">{t("post_drop_sub")}</div>
+              </label>
+            )}
 
             <div>
               <label className="label">{t("post_video_title")}</label>
@@ -136,11 +156,7 @@ export default function Post() {
             ) : tiktokProfile ? (
               <div className="account-status-row">
                 {tiktokProfile.avatar_url ? (
-                  <img
-                    src={tiktokProfile.avatar_url}
-                    alt="avatar"
-                    className="account-avatar-sm"
-                  />
+                  <img src={tiktokProfile.avatar_url} alt="avatar" className="account-avatar-sm" />
                 ) : (
                   <div className="account-avatar-sm account-avatar-placeholder">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -166,6 +182,10 @@ export default function Post() {
                 </button>
               </div>
             )}
+
+            <div className="notice notice-info" style={{ fontSize: 12 }}>
+              {t("post_inbox_notice")}
+            </div>
 
             <div className="inline-actions">
               <button
