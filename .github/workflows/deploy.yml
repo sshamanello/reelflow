@@ -101,7 +101,7 @@ jobs:
 
       - name: Upload to reg.ru via FTPS
         run: |
-          lftp -c "set ftps:initial-prot ''; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate false; open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST; lcd dist; mirror --reverse --verbose --include-glob .htaccess . $REGRU_PATH/; quit"
+          lftp -c "set ftps:initial-prot ''; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate false; set ftp:umask 022; open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST; mkdir -p $REGRU_PATH; lcd dist; mirror --reverse --verbose --include-glob .htaccess . $REGRU_PATH/; chmod 755 $REGRU_PATH; quit"
         env:
           REGRU_HOST: ${{ secrets.REGRU_HOST }}
           REGRU_USER: ${{ secrets.REGRU_USER }}
