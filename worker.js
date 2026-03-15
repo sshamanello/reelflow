@@ -638,9 +638,11 @@ async function handleUpload(req, env, cors) {
     },
   };
 
-  console.log("Direct Post INIT body:", JSON.stringify(initBody));
+  // 4) Try Direct Post API first, fall back to Inbox if not approved yet
+  let uploadUrl, publishId, useInbox = false;
 
-  const initResp = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
+  console.log("Direct Post INIT body:", JSON.stringify(initBody));
+  const directResp = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${access_token}`,
@@ -650,20 +652,56 @@ async function handleUpload(req, env, cors) {
     body: JSON.stringify(initBody),
   });
 
-  const initText = await initResp.text();
-  console.log("Direct Post INIT status:", initResp.status, "body:", initText);
+  const directText = await directResp.text();
+  console.log("Direct Post INIT status:", directResp.status, "body:", directText);
 
-  let initJson = {};
-  try { initJson = JSON.parse(initText); } catch {}
-  const initOk = initResp.ok && (!initJson.error || initJson.error.code === "ok");
-  if (!initOk) {
-    return json({ error: "init_failed", status: initResp.status, detail: initJson || initText }, cors, 400);
+  let directJson = {};
+  try { directJson = JSON.parse(directText); } catch {}
+  const directOk = directResp.ok && (!directJson.error || directJson.error.code === "ok");
+
+  if (directOk) {
+    uploadUrl = directJson?.data?.upload_url;
+    publishId = directJson?.data?.publish_id;
+  } else {
+    // Direct Post not approved yet — fall back to Inbox API
+    console.log("Direct Post failed, falling back to Inbox API...");
+    useInbox = true;
+
+    const inboxBody = {
+      source_info: {
+        source: "FILE_UPLOAD",
+        video_size: size,
+        chunk_size: baseChunk,
+        total_chunk_count: totalChunks,
+      },
+    };
+
+    const inboxResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(inboxBody),
+    });
+
+    const inboxText = await inboxResp.text();
+    console.log("Inbox INIT status:", inboxResp.status, "body:", inboxText);
+
+    let inboxJson = {};
+    try { inboxJson = JSON.parse(inboxText); } catch {}
+    const inboxOk = inboxResp.ok && (!inboxJson.error || inboxJson.error.code === "ok");
+    if (!inboxOk) {
+      return json({ error: "init_failed", status: inboxResp.status, detail: inboxJson || inboxText }, cors, 400);
+    }
+
+    uploadUrl = inboxJson?.data?.upload_url;
+    publishId = inboxJson?.data?.publish_id;
   }
 
-  const uploadUrl = initJson?.data?.upload_url;
-  const publishId = initJson?.data?.publish_id;
   if (!uploadUrl || !publishId) {
-    return json({ error: "init_missing_fields", detail: initJson }, cors, 400);
+    return json({ error: "init_missing_fields" }, cors, 400);
   }
 
   // 5) PUT chunks
@@ -695,7 +733,22 @@ async function handleUpload(req, env, cors) {
     offset = end + 1;
   }
 
-  // 6) Done — TikTok processes video asynchronously, poll status endpoint
+  // 6) Inbox: publish to drafts; Direct: TikTok processes async
+  if (useInbox) {
+    const publishResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/publish/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ publish_id: publishId }),
+    });
+    const publishText = await publishResp.text();
+    console.log("Inbox PUBLISH status:", publishResp.status, "body:", publishText);
+    return json({ status: "uploaded_to_inbox", publish_id: publishId }, cors, 200);
+  }
+
   return json({ status: "processing", publish_id: publishId }, cors, 200);
 }
 
