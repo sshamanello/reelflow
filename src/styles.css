@@ -1205,14 +1205,18 @@ button, input, textarea, select { font: inherit; }
 .video-preview-wrap {
   border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line-2);
   background: #000;
+  display: flex;
+  flex-direction: column;
+  max-width: 260px;
 }
 
 .video-preview {
   width: 100%;
+  max-height: 200px;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .video-preview-footer {
