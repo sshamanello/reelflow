@@ -5,47 +5,136 @@ import { useAppToast } from "../components/Layout";
 import { useI18n } from "../hooks/useI18n";
 import { api } from "../lib/api";
 
+const PRIVACY_OPTIONS = [
+  { value: "PUBLIC_TO_EVERYONE",    labelKey: "post_privacy_public" },
+  { value: "MUTUAL_FOLLOW_FRIENDS", labelKey: "post_privacy_friends" },
+  { value: "SELF_ONLY",             labelKey: "post_privacy_self" },
+];
+
 export default function Post() {
   const { showToast } = useAppToast();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [thumbnail, setThumbnail] = useState(null); // { url, blob }
-  const [uploading, setUploading] = useState(false);
-  const [tiktokProfile, setTiktokProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const fileInputRef = useRef(null);
-  const thumbInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
 
+  // file
+  const [title, setTitle]           = useState("");
+  const [description, setDescription] = useState("");
+  const [file, setFile]             = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [thumbnail, setThumbnail]   = useState(null); // { url, blob, timestampMs }
+  const [uploading, setUploading]   = useState(false);
+
+  // tiktok account
+  const [tiktokProfile, setTiktokProfile]   = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // creator info (privacy options, caps)
+  const [creatorInfo, setCreatorInfo]         = useState(null);
+  const [creatorInfoLoading, setCreatorInfoLoading] = useState(false);
+
+  // publish settings
+  const [privacyLevel, setPrivacyLevel]         = useState("");
+  const [disableComment, setDisableComment]     = useState(false);
+  const [disableDuet, setDisableDuet]           = useState(false);
+  const [disableStitch, setDisableStitch]       = useState(false);
+  const [brandContentToggle, setBrandContentToggle] = useState(false);
+  const [brandOrganicToggle, setBrandOrganicToggle] = useState(false);
+
+  // post processing
+  const [processing, setProcessing]   = useState(false);
+  const [publishId, setPublishId]     = useState(null);
+  const [publishStatus, setPublishStatus] = useState(null);
+
+  const fileInputRef  = useRef(null);
+  const thumbInputRef = useRef(null);
+  const videoRef      = useRef(null);
+  const canvasRef     = useRef(null);
+  const pollRef       = useRef(null);
+
+  // Load profile
   useEffect(() => {
-    api.getMe().then(data => {
-      setTiktokProfile(data?.profiles?.tiktok || null);
-    }).catch(() => setTiktokProfile(null)).finally(() => setProfileLoading(false));
+    api.getMe()
+      .then(data => setTiktokProfile(data?.profiles?.tiktok || null))
+      .catch(() => setTiktokProfile(null))
+      .finally(() => setProfileLoading(false));
   }, []);
+
+  // Load creator info when profile is ready
+  useEffect(() => {
+    if (!tiktokProfile) return;
+    setCreatorInfoLoading(true);
+    api.getCreatorInfo()
+      .then(info => {
+        setCreatorInfo(info);
+        // pre-fill defaults from creator caps
+        if (info?.comment_disabled) setDisableComment(true);
+        if (info?.duet_disabled)    setDisableDuet(true);
+        if (info?.stitch_disabled)  setDisableStitch(true);
+      })
+      .catch(() => setCreatorInfo(null))
+      .finally(() => setCreatorInfoLoading(false));
+  }, [tiktokProfile]);
+
+  // When brandContentToggle is on, branded content requires PUBLIC
+  useEffect(() => {
+    if (brandContentToggle) setPrivacyLevel("PUBLIC_TO_EVERYONE");
+  }, [brandContentToggle]);
+
+  // Poll publish status
+  useEffect(() => {
+    if (!processing || !publishId) return;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.getPublishStatus(publishId);
+        const status = res?.status || res?.publish_status;
+        setPublishStatus(status);
+
+        const done = ["PUBLISHED", "FAILED", "SEND_TO_USER_INBOX"].includes(status);
+        if (done || attempts >= MAX_ATTEMPTS) {
+          clearInterval(pollRef.current);
+          setProcessing(false);
+          if (status === "PUBLISHED") {
+            showToast(t("post_processing_done"));
+          } else {
+            showToast(t("post_success")); // inbox/drafts
+          }
+        }
+      } catch {
+        clearInterval(pollRef.current);
+        setProcessing(false);
+        showToast(t("post_success"));
+      }
+    }, 3000);
+
+    return () => clearInterval(pollRef.current);
+  }, [processing, publishId]);
 
   function handleFileChange(f) {
     setFile(f);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(f ? URL.createObjectURL(f) : null);
     setThumbnail(null);
+    setProcessing(false);
+    setPublishId(null);
+    setPublishStatus(null);
   }
 
   function captureFrame() {
-    const video = videoRef.current;
+    const video  = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
-    canvas.width = video.videoWidth;
+    canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
+    const timestampMs = Math.floor((video.currentTime || 0) * 1000);
     canvas.toBlob(blob => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
-      setThumbnail({ url, blob });
+      setThumbnail({ url, blob, timestampMs });
     }, "image/jpeg", 0.92);
   }
 
@@ -53,31 +142,57 @@ export default function Post() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (thumbnail?.url) URL.revokeObjectURL(thumbnail.url);
-    setThumbnail({ url: URL.createObjectURL(f), blob: f });
+    setThumbnail({ url: URL.createObjectURL(f), blob: f, timestampMs: 0 });
   }
 
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       if (thumbnail?.url) URL.revokeObjectURL(thumbnail.url);
+      clearInterval(pollRef.current);
     };
   }, []);
 
+  // Available privacy options: from creator info or all
+  const availablePrivacy = creatorInfo?.privacy_level_options
+    ? PRIVACY_OPTIONS.filter(o => creatorInfo.privacy_level_options.includes(o.value))
+    : PRIVACY_OPTIONS;
+
   async function handlePublishNow() {
-    if (!file) { showToast(t("post_no_file")); return; }
-    if (!tiktokProfile) { showToast(t("post_need_account")); return; }
+    if (!file)           { showToast(t("post_no_file"));        return; }
+    if (!tiktokProfile)  { showToast(t("post_need_account"));   return; }
+    if (!privacyLevel)   { showToast(t("post_privacy_required")); return; }
+
     try {
       setUploading(true);
-      const res = await api.uploadTikTok({ file });
+      const res = await api.uploadTikTok({
+        file,
+        title: title || file.name,
+        privacyLevel,
+        disableComment,
+        disableDuet,
+        disableStitch,
+        brandContentToggle,
+        brandOrganicToggle,
+        coverTimestampMs: thumbnail?.timestampMs ?? 0,
+      });
+
       await api.saveVideo({
         videoName: title || file.name,
         publishId: res.publish_id,
         status: res.status === "published" ? "published" : "uploaded",
       });
-      showToast(t("post_success"));
-      handleFileChange(null);
-      setTitle("");
-      setDescription("");
+
+      if (res.publish_id) {
+        setPublishId(res.publish_id);
+        setProcessing(true);
+        showToast(t("post_processing"));
+      } else {
+        showToast(t("post_success"));
+        handleFileChange(null);
+        setTitle("");
+        setDescription("");
+      }
     } catch (e) {
       showToast(e?.payload?.message || e?.payload?.error || t("post_error"));
     } finally {
@@ -85,24 +200,21 @@ export default function Post() {
     }
   }
 
+  const canPublish = !uploading && !processing && !!file && !!tiktokProfile && !!privacyLevel;
+
   return (
     <>
       <h1 className="page-title">{t("post_title")}</h1>
       <p className="page-subtitle">{t("post_subtitle")}</p>
 
       <section className="grid-2">
+        {/* LEFT: video file + thumbnail + title */}
         <SectionCard title={t("post_video_file")}>
           <div className="column">
 
-            {/* Превью или зона загрузки */}
             {previewUrl ? (
               <div className="video-preview-wrap">
-                <video
-                  ref={videoRef}
-                  src={previewUrl}
-                  controls
-                  className="video-preview"
-                />
+                <video ref={videoRef} src={previewUrl} controls className="video-preview" />
                 <canvas ref={canvasRef} style={{ display: "none" }} />
                 <div className="video-preview-footer">
                   <span className="video-preview-name">
@@ -111,10 +223,7 @@ export default function Post() {
                     </svg>
                     {file.name} · {(file.size / 1024 / 1024).toFixed(1)} МБ
                   </span>
-                  <button
-                    className="btn btn-sm btn-ghost"
-                    onClick={() => { handleFileChange(null); }}
-                  >
+                  <button className="btn btn-sm btn-ghost" onClick={() => handleFileChange(null)}>
                     {t("post_change_file")}
                   </button>
                 </div>
@@ -138,7 +247,7 @@ export default function Post() {
               </label>
             )}
 
-            {/* Обложка */}
+            {/* Thumbnail */}
             {previewUrl && (
               <div>
                 <label className="label">{t("post_thumbnail")}</label>
@@ -167,13 +276,8 @@ export default function Post() {
                     <button className="btn btn-sm btn-ghost" onClick={() => thumbInputRef.current?.click()}>
                       {t("post_upload_thumb")}
                     </button>
-                    <input
-                      ref={thumbInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={handleThumbUpload}
-                    />
+                    <input ref={thumbInputRef} type="file" accept="image/*"
+                      style={{ display: "none" }} onChange={handleThumbUpload} />
                   </div>
                 </div>
               </div>
@@ -185,6 +289,7 @@ export default function Post() {
                 className="field"
                 type="text"
                 value={title}
+                maxLength={150}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t("post_video_title_ph")}
               />
@@ -202,8 +307,11 @@ export default function Post() {
           </div>
         </SectionCard>
 
+        {/* RIGHT: settings */}
         <SectionCard title={t("post_settings")}>
           <div className="column">
+
+            {/* Platform */}
             <div>
               <label className="label">{t("post_platforms")}</label>
               <div className="platform-row">
@@ -216,6 +324,7 @@ export default function Post() {
               </div>
             </div>
 
+            {/* Account status */}
             {profileLoading ? (
               <div className="notice notice-info">{t("loading")}</div>
             ) : tiktokProfile ? (
@@ -238,32 +347,136 @@ export default function Post() {
             ) : (
               <div className="notice notice-warn">
                 {t("post_need_account")}
-                <button
-                  className="btn btn-sm btn-dark"
-                  style={{ marginTop: 8, display: "block" }}
-                  onClick={() => navigate("/accounts")}
-                >
+                <button className="btn btn-sm btn-dark" style={{ marginTop: 8, display: "block" }}
+                  onClick={() => navigate("/accounts")}>
                   {t("acc_connect")}
                 </button>
               </div>
             )}
 
-            <div className="notice notice-info" style={{ fontSize: 12 }}>
-              {t("post_inbox_notice")}
-            </div>
+            {/* Privacy level */}
+            {tiktokProfile && (
+              <div>
+                <label className="label">{t("post_privacy")} *</label>
+                {creatorInfoLoading ? (
+                  <div style={{ fontSize: 13, color: "var(--muted)" }}>{t("loading")}</div>
+                ) : (
+                  <select
+                    className="select"
+                    value={privacyLevel}
+                    onChange={e => setPrivacyLevel(e.target.value)}
+                    disabled={brandContentToggle}
+                  >
+                    <option value="" disabled>{t("post_privacy_select")}</option>
+                    {availablePrivacy.map(opt => (
+                      <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {/* Interactions */}
+            {tiktokProfile && (
+              <div>
+                <label className="label">{t("post_interactions")}</label>
+                <div className="column" style={{ gap: 8 }}>
+                  <PostToggle
+                    label={t("post_allow_comments")}
+                    checked={!disableComment}
+                    disabled={creatorInfo?.comment_disabled}
+                    onChange={v => setDisableComment(!v)}
+                  />
+                  <PostToggle
+                    label={t("post_allow_duet")}
+                    checked={!disableDuet}
+                    disabled={creatorInfo?.duet_disabled}
+                    onChange={v => setDisableDuet(!v)}
+                  />
+                  <PostToggle
+                    label={t("post_allow_stitch")}
+                    checked={!disableStitch}
+                    disabled={creatorInfo?.stitch_disabled}
+                    onChange={v => setDisableStitch(!v)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Commercial content disclosure */}
+            {tiktokProfile && (
+              <div>
+                <label className="label">{t("post_commercial")}</label>
+                <div className="column" style={{ gap: 8 }}>
+                  <PostToggle
+                    label={t("post_your_brand")}
+                    hint={t("post_commercial_hint")}
+                    checked={brandOrganicToggle}
+                    onChange={v => setBrandOrganicToggle(v)}
+                  />
+                  <PostToggle
+                    label={t("post_branded_content")}
+                    checked={brandContentToggle}
+                    onChange={v => setBrandContentToggle(v)}
+                  />
+                  {brandContentToggle && (
+                    <div className="notice notice-warn" style={{ fontSize: 12 }}>
+                      {t("post_branded_content_note")}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Processing state */}
+            {processing && (
+              <div className="notice notice-info" style={{ fontSize: 13 }}>
+                <span style={{ marginRight: 8 }}>⏳</span>
+                {publishStatus ? `${t("post_processing")} (${publishStatus})` : t("post_processing")}
+              </div>
+            )}
+
+            {/* Inbox notice (not processing) */}
+            {!processing && (
+              <div className="notice notice-info" style={{ fontSize: 12 }}>
+                {t("post_inbox_notice")}
+              </div>
+            )}
 
             <div className="inline-actions">
               <button
                 className="btn btn-dark"
-                disabled={uploading || !file || !tiktokProfile}
+                disabled={!canPublish}
                 onClick={handlePublishNow}
               >
-                {uploading ? t("post_uploading") : t("post_publish")}
+                {uploading ? t("post_uploading") : processing ? t("post_processing") : t("post_publish")}
               </button>
             </div>
           </div>
         </SectionCard>
       </section>
     </>
+  );
+}
+
+/* ─── Toggle component ──────────────────────────────────── */
+function PostToggle({ label, hint, checked, disabled, onChange }) {
+  return (
+    <label className={`post-toggle${disabled ? " post-toggle--disabled" : ""}`}>
+      <span className="post-toggle-text">
+        <span>{label}</span>
+        {hint && <span className="post-toggle-hint">{hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={e => onChange(e.target.checked)}
+        style={{ display: "none" }}
+      />
+      <span className={`post-toggle-track${checked ? " on" : ""}${disabled ? " disabled" : ""}`}>
+        <span className="post-toggle-knob" />
+      </span>
+    </label>
   );
 }

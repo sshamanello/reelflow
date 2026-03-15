@@ -520,10 +520,65 @@ async function handleLogout(req, env, cors) {
   }
 }
 
-/* -------------------- upload stub -------------------- */
+/* -------------------- creator info -------------------- */
 
-// POST /api/tiktok/upload — загрузка видео в Inbox (fixed 5MB chunks)
-// POST /api/tiktok/upload — Inbox Upload c правильным total_chunk_count (floor) и «расширенным» последним чанком
+async function handleCreatorInfo(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) return json({ error: "no_tiktok_token" }, cors, 401);
+
+  const resp = await fetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${access_token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify({}),
+  });
+
+  const text = await resp.text();
+  console.log("creator_info status:", resp.status, "body:", text);
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+
+  if (!resp.ok) return json({ error: "creator_info_failed", detail: data }, cors, resp.status);
+  return json(data?.data || data, cors, 200);
+}
+
+/* -------------------- publish status -------------------- */
+
+async function handlePublishStatus(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const url = new URL(req.url);
+  const publish_id = url.searchParams.get("publish_id");
+  if (!publish_id) return json({ error: "missing_publish_id" }, cors, 400);
+
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) return json({ error: "no_tiktok_token" }, cors, 401);
+
+  const resp = await fetch("https://open.tiktokapis.com/v2/post/publish/status/fetch/", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${access_token}`,
+      "Content-Type": "application/json; charset=UTF-8",
+    },
+    body: JSON.stringify({ publish_id }),
+  });
+
+  const text = await resp.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+  return json(data?.data || data, cors, resp.status);
+}
+
+/* -------------------- upload (Direct Post API) -------------------- */
+
 async function handleUpload(req, env, cors) {
   const sid = getSidFromReq(req, env);
   const sess = await getSession(env, sid);
@@ -547,17 +602,34 @@ async function handleUpload(req, env, cors) {
   }
   const buf = new Uint8Array(await file.arrayBuffer());
 
-  // 2) базовый размер чанка
-  const FIVE_MB = 5 * 1024 * 1024; // 5,242,880
+  // 2) post metadata from form
+  const postTitle = (form.get("title") || "My video").slice(0, 150);
+  const privacyLevel = form.get("privacy_level") || "SELF_ONLY";
+  const disableComment = form.get("disable_comment") === "true";
+  const disableDuet = form.get("disable_duet") === "true";
+  const disableStitch = form.get("disable_stitch") === "true";
+  const brandContentToggle = form.get("brand_content_toggle") === "true";
+  const brandOrganicToggle = form.get("brand_organic_toggle") === "true";
+  const coverTimestampMs = Number(form.get("cover_timestamp_ms") || 0);
+
+  // 3) chunk calc
+  const FIVE_MB = 5 * 1024 * 1024;
   const baseChunk = (size < FIVE_MB) ? size : FIVE_MB;
-
-  // ВАЖНО: total_chunk_count = floor(size / baseChunk)
-  // Последний чанк = baseChunk + remainder (может быть > baseChunk, до 128MB)
   const totalChunks = Math.max(1, Math.floor(size / baseChunk));
-  const remainder = size - (baseChunk * totalChunks); // 0..(baseChunk-1)
+  const remainder = size - (baseChunk * totalChunks);
 
-  // 3) INIT — шлём baseChunk и floor-count (как требуют доки)
+  // 4) INIT — Direct Post API
   const initBody = {
+    post_info: {
+      title: postTitle,
+      privacy_level: privacyLevel,
+      disable_duet: disableDuet,
+      disable_comment: disableComment,
+      disable_stitch: disableStitch,
+      video_cover_timestamp_ms: coverTimestampMs,
+      brand_content_toggle: brandContentToggle,
+      brand_organic_toggle: brandOrganicToggle,
+    },
     source_info: {
       source: "FILE_UPLOAD",
       video_size: size,
@@ -566,7 +638,9 @@ async function handleUpload(req, env, cors) {
     },
   };
 
-  const initResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+  console.log("Direct Post INIT body:", JSON.stringify(initBody));
+
+  const initResp = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${access_token}`,
@@ -577,7 +651,7 @@ async function handleUpload(req, env, cors) {
   });
 
   const initText = await initResp.text();
-  console.log("Inbox INIT status:", initResp.status, "body:", initText);
+  console.log("Direct Post INIT status:", initResp.status, "body:", initText);
 
   let initJson = {};
   try { initJson = JSON.parse(initText); } catch {}
@@ -592,16 +666,13 @@ async function handleUpload(req, env, cors) {
     return json({ error: "init_missing_fields", detail: initJson }, cors, 400);
   }
 
-  // 4) PUT чанки
+  // 5) PUT chunks
   let offset = 0;
   for (let i = 0; i < totalChunks; i++) {
-    // для первых (totalChunks - 1) чанк-ов шлём ровно baseChunk
-    // для последнего — baseChunk + remainder
     const isLast = (i === totalChunks - 1);
     const thisLen = isLast ? (baseChunk + remainder) : baseChunk;
-
     const start = offset;
-    const end = start + thisLen - 1; // включительно
+    const end = start + thisLen - 1;
     const chunk = buf.slice(start, end + 1);
 
     const putResp = await fetch(uploadUrl, {
@@ -609,7 +680,7 @@ async function handleUpload(req, env, cors) {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Length": String(chunk.length),
-        "Content-Range": `bytes ${start}-${end}/${size}`, // 0-based inclusive
+        "Content-Range": `bytes ${start}-${end}/${size}`,
         Accept: "application/json",
       },
       body: chunk,
@@ -618,66 +689,14 @@ async function handleUpload(req, env, cors) {
     if (!(putResp.ok || putResp.status === 206 || putResp.status === 201)) {
       const putText = await putResp.text().catch(() => "");
       console.log("Chunk PUT failed:", putResp.status, putText);
-      return json(
-        {
-          error: "chunk_upload_failed",
-          status: putResp.status,
-          range: `bytes ${start}-${end}/${size}`,
-          body: putText,
-          publish_id: publishId,
-        },
-        cors,
-        502
-      );
+      return json({ error: "chunk_upload_failed", status: putResp.status, range: `bytes ${start}-${end}/${size}`, body: putText, publish_id: publishId }, cors, 502);
     }
 
     offset = end + 1;
   }
 
-  // 5) PUBLISH — перемещаем видео из Inbox в черновики
-  const publishBody = {
-    publish_id: publishId,
-  };
-
-  console.log("Publishing video to TikTok drafts...");
-  const publishResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/publish/", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${access_token}`,
-      "Content-Type": "application/json; charset=UTF-8",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(publishBody),
-  });
-
-  const publishText = await publishResp.text();
-  console.log("Inbox PUBLISH status:", publishResp.status, "body:", publishText);
-
-  let publishJson = {};
-  try { publishJson = JSON.parse(publishText); } catch {}
-
-  if (!publishResp.ok) {
-    // Если publish не работает (API не одобрен), возвращаем upload с сообщением
-    console.log("Publish failed, returning uploaded_to_inbox");
-    return json({
-      status: "uploaded_to_inbox",
-      publish_id: publishId,
-      message: "Video uploaded to TikTok inbox. Note: Content Publishing API may require approval before videos appear in drafts.",
-      publish_error: {
-        status: publishResp.status,
-        detail: publishJson || publishText
-      }
-    }, cors, 200);
-  }
-
-  // 6) Готово — видео в черновиках TikTok
-  const videoId = publishJson?.data?.video_id || publishId;
-  return json({
-    status: "published",
-    publish_id: publishId,
-    video_id: videoId,
-    video_url: publishJson?.data?.video_url,
-  }, cors, 200);
+  // 6) Done — TikTok processes video asynchronously, poll status endpoint
+  return json({ status: "processing", publish_id: publishId }, cors, 200);
 }
 
 /* -------------------- YouTube upload -------------------- */
@@ -1081,6 +1100,12 @@ export default {
       }
       if (url.pathname === "/api/tiktok/upload" && req.method === "POST") {
         return await handleUpload(req, env, cors);
+      }
+      if (url.pathname === "/api/tiktok/creator-info" && req.method === "GET") {
+        return await handleCreatorInfo(req, env, cors);
+      }
+      if (url.pathname === "/api/tiktok/status" && req.method === "GET") {
+        return await handlePublishStatus(req, env, cors);
       }
       if (url.pathname === "/api/tiktok/publish" && req.method === "POST") {
         return json({ status: "ok" }, cors);

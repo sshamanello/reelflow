@@ -163,10 +163,34 @@ export const api = {
     return MOCK_API ? mockRequest("GET", "/api/stats") : request("/api/stats", { method: "GET" });
   },
 
-  async uploadTikTok({ file }) {
+  getCreatorInfo() {
+    if (MOCK_API) return Promise.resolve({
+      privacy_level_options: ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"],
+      comment_disabled: false,
+      duet_disabled: false,
+      stitch_disabled: false,
+      max_video_post_duration_sec: 600,
+    });
+    return request("/api/tiktok/creator-info", { method: "GET" });
+  },
+
+  getPublishStatus(publish_id) {
+    if (MOCK_API) return Promise.resolve({ status: "PUBLISHED" });
+    return request(`/api/tiktok/status?publish_id=${encodeURIComponent(publish_id)}`, { method: "GET" });
+  },
+
+  async uploadTikTok({ file, title, privacyLevel, disableComment, disableDuet, disableStitch, brandContentToggle, brandOrganicToggle, coverTimestampMs }) {
     if (MOCK_API) return mockRequest("POST", "/api/tiktok/upload", { fileName: file?.name });
     const form = new FormData();
     form.append("file", file);
+    if (title) form.append("title", title);
+    if (privacyLevel) form.append("privacy_level", privacyLevel);
+    form.append("disable_comment", String(!!disableComment));
+    form.append("disable_duet", String(!!disableDuet));
+    form.append("disable_stitch", String(!!disableStitch));
+    form.append("brand_content_toggle", String(!!brandContentToggle));
+    form.append("brand_organic_toggle", String(!!brandOrganicToggle));
+    if (coverTimestampMs != null) form.append("cover_timestamp_ms", String(coverTimestampMs));
     return request("/api/tiktok/upload", {
       method: "POST",
       body: form,
