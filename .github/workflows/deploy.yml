@@ -101,7 +101,9 @@ jobs:
 
       - name: Upload to reg.ru via FTPS
         run: |
-          lftp -c "set ftps:initial-prot ''; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate false; set ftp:umask 022; open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST; mkdir -p $REGRU_PATH; lcd dist; mirror --reverse --verbose --include-glob .htaccess . $REGRU_PATH/; chmod 755 $REGRU_PATH; quit"
+          echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0; url=/ReelFlow/"><title>ReelFlow</title></head><body><script>window.location.replace("/ReelFlow/");</script></body></html>' > root-index.html
+          REGRU_ROOT=$(dirname $REGRU_PATH)
+          lftp -c "set ftps:initial-prot ''; set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate false; set ftp:umask 022; open -u $REGRU_USER,$REGRU_PASSWORD ftp://$REGRU_HOST; mkdir -p $REGRU_PATH; lcd dist; mirror --reverse --verbose --include-glob .htaccess . $REGRU_PATH/; chmod 755 $REGRU_PATH; put ../root-index.html -o $REGRU_ROOT/index.html; quit"
         env:
           REGRU_HOST: ${{ secrets.REGRU_HOST }}
           REGRU_USER: ${{ secrets.REGRU_USER }}
