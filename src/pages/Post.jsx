@@ -200,7 +200,7 @@ export default function Post() {
     }
   }
 
-  const canPublish = !uploading && !processing && !!file && !!tiktokProfile && !!privacyLevel;
+  const canPublish = !uploading && !!file && !!tiktokProfile && !!privacyLevel;
 
   return (
     <>
@@ -449,7 +449,7 @@ export default function Post() {
                 disabled={!canPublish}
                 onClick={handlePublishNow}
               >
-                {uploading ? t("post_uploading") : processing ? t("post_processing") : t("post_publish")}
+                {uploading ? t("post_uploading") : t("post_publish")}
               </button>
             </div>
           </div>
