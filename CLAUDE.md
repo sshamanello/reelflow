@@ -143,15 +143,52 @@ wrangler.toml   Worker config (environments, KV bindings)
 .github/workflows/deploy.yml  CI/CD
 ```
 
-## Current State (2026-03-14)
+## TikTok Token Persistence
+
+TikTok tokens survive logout/login cycles via a two-layer KV storage:
+
+- **Session layer** (`sid:${sessionId}`) — ephemeral, deleted on logout
+- **User layer** (`tiktok_token:${userId}`) — persistent, TTL 60 days
+
+Flow:
+- On `POST /api/oauth/exchange` → saves token to both session and `tiktok_token:${userId}`
+- On `POST /api/auth/login` → restores token from `tiktok_token:${userId}` into new session
+- On `POST /api/oauth/disconnect` (platform disconnect) → deletes from both
+
+## TikTok OAuth Notes
+
+- Redirect URI **must not** contain query params → use `https://sshamanello.ru/auth/callback` (no `?platform=tiktok`)
+- Platform identifier stored in `sessionStorage` before redirect, read in `AuthCallback.jsx`
+- Redirect URI must be registered in TikTok Developer Portal → Login Kit for each environment
+
+## Favicon
+
+- Files: `public/logo.svg` and `public/logo.png` (deployed to `/ReelFlow/logo.svg`)
+- Referenced in `index.html` with relative paths (`href="logo.svg"`) so Vite applies base correctly
+- Terms/Privacy pages use `/static/brand/logo.svg` (absolute path, files at root of sshamanello.ru)
+
+## Static Pages (root-redirect/)
+
+Files in `E:\code\reelflow\root-redirect\` are **not** part of the Vite build — upload manually to `/www/sshamanello.ru/`:
+- `terms.html` → accessible at `sshamanello.ru/terms`
+- `privacy.html` → accessible at `sshamanello.ru/privacy`
+
+Root `.htaccess` handles clean URLs: `/terms` → `terms.html`, `/privacy` → `privacy.html`
+
+## Current State (2026-03-15)
 
 **Done:**
 - User auth (register/login/logout) with PBKDF2
 - TikTok OAuth with PKCE
+- TikTok token persisted across logout/login (`tiktok_token:${userId}` in KV)
 - Landing page with RU/EN i18n
-- Post page (TikTok-only)
+- Post page: video preview (compact rectangle), thumbnail picker (capture frame / upload image)
+- Dashboard: stat cards (connected/uploaded/errors), TikTok avatar display
+- Sidebar: Repost tab hidden, Terms/Privacy links at bottom
+- Terms of Service and Privacy Policy pages (dark style, Russian)
+- Favicon (logo.svg + logo.png in public/)
 - GitHub Actions CI/CD → Cloudflare Workers + reg.ru
 
 **Known issues / TODO:**
-- TikTok redirect_uri must be registered in TikTok Developer Portal for each environment
+- TikTok App Review: need to submit for production access
 - YouTube support removed (TikTok-only for now)

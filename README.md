@@ -4,7 +4,18 @@
 
 [![CI](https://github.com/sshamanello/reelflow/actions/workflows/deploy.yml/badge.svg)](https://github.com/sshamanello/reelflow/actions/workflows/deploy.yml)
 
-**Live:** [sshamanello.ru](https://sshamanello.ru)
+**Live:** [sshamanello.ru/ReelFlow/](https://sshamanello.ru/ReelFlow/)
+
+## Возможности
+
+- Регистрация и вход (email + пароль, PBKDF2)
+- Подключение TikTok через официальный OAuth 2.0 + PKCE
+- TikTok токен сохраняется между сессиями (не слетает при выходе)
+- Загрузка видео в TikTok через официальный API (до 4 ГБ)
+- Превью видео + выбор обложки (кадр из видео или свой файл)
+- История публикаций
+- Интерфейс на русском и английском языках
+- Страницы Terms of Service и Privacy Policy
 
 ## Стек
 
@@ -110,13 +121,25 @@ npx wrangler secret put TIKTOK_CLIENT_SECRET --env production
                               └─────────────────┘
 ```
 
+### KV Storage Schema
+
+```
+users:${userId}              → { id, email, passwordHash, salt, createdAt }
+users:email:${email}         → userId
+sid:${sessionId}             → { userId, email, createdAt, tiktok? }
+tiktok_token:${userId}       → TikTok OAuth token (persistent, TTL 60 дней)
+videos:${sessionId}          → метаданные видео
+```
+
 ### OAuth Flow (TikTok PKCE)
 
 1. Frontend генерирует `code_verifier` + `code_challenge` (SHA-256)
 2. Пользователь авторизуется на TikTok
-3. TikTok редиректит на `/auth/callback?code=...`
-4. Frontend отправляет `code` + `code_verifier` на worker
-5. Worker меняет код на access token, сохраняет в KV
+3. TikTok редиректит на `/auth/callback` (без query-параметров в URI)
+4. Платформа (`tiktok`) читается из `sessionStorage`
+5. Frontend отправляет `code` + `code_verifier` на worker
+6. Worker меняет код на access token, сохраняет в сессии и в `tiktok_token:${userId}`
+7. При следующем входе токен восстанавливается автоматически
 
 ## API
 
