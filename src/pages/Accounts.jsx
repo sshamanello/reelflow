@@ -77,8 +77,12 @@ export default function Accounts() {
         <section className="account-grid">
           <article className="account-card">
             <div className="account-head">
-              <div className="account-icon" style={{ background: "#010101", color: "white" }}>
-                <TikTokIcon />
+              <div className="account-icon" style={{ background: "#010101", color: "white", overflow: "hidden" }}>
+                {tiktok?.avatar_url ? (
+                  <img src={tiktok.avatar_url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+                ) : (
+                  <TikTokIcon />
+                )}
               </div>
               <div>
                 <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700 }}>TikTok</h3>

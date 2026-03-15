@@ -76,6 +76,7 @@ const translations = {
     post_done: "Готово",
     post_error: "Ошибка загрузки",
     post_tiktok_notice: "Публикация через официальный TikTok API. Требует подключённого аккаунта.",
+    post_need_account: "Подключите TikTok аккаунт в разделе Аккаунты, чтобы публиковать видео.",
 
     // Accounts
     acc_title: "Аккаунты",
@@ -100,6 +101,7 @@ const translations = {
     // History
     hist_title: "История публикаций",
     hist_subtitle: "Все загруженные видео",
+    hist_recent_videos: "Последние видео",
     hist_loading: "Загрузка...",
     hist_no_videos: "Нет загруженных видео",
     hist_status: "Статус",
@@ -200,6 +202,7 @@ const translations = {
     post_done: "Done",
     post_error: "Upload error",
     post_tiktok_notice: "Published via the official TikTok API. Requires a connected account.",
+    post_need_account: "Connect your TikTok account in the Accounts section to publish videos.",
 
     // Accounts
     acc_title: "Accounts",
@@ -224,6 +227,7 @@ const translations = {
     // History
     hist_title: "Publication history",
     hist_subtitle: "All uploaded videos",
+    hist_recent_videos: "Recent videos",
     hist_loading: "Loading...",
     hist_no_videos: "No videos uploaded",
     hist_status: "Status",

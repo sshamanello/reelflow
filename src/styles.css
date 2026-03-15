@@ -726,6 +726,43 @@ button, input, textarea, select { font: inherit; }
   flex-shrink: 0;
 }
 
+/* ─── Account status in Post ─────────────────────────────── */
+.account-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.account-avatar-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.account-avatar-placeholder {
+  background: #010101;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notice-warn {
+  background: rgba(255,170,0,0.1);
+  border: 1px solid rgba(255,170,0,0.3);
+  color: var(--text-1);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* ─── Toast ──────────────────────────────────────────────── */
 
 .toast {

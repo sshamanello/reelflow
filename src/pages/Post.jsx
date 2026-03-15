@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import SectionCard from "../components/SectionCard";
 import { useAppToast } from "../components/Layout";
 import { useI18n } from "../hooks/useI18n";
@@ -7,16 +8,25 @@ import { api } from "../lib/api";
 export default function Post() {
   const { showToast } = useAppToast();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [tiktokProfile, setTiktokProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  useEffect(() => {
+    api.getMe().then(data => {
+      setTiktokProfile(data?.profiles?.tiktok || null);
+    }).catch(() => {
+      setTiktokProfile(null);
+    }).finally(() => setProfileLoading(false));
+  }, []);
 
   async function handlePublishNow() {
-    if (!file) {
-      showToast(t("post_no_file"));
-      return;
-    }
+    if (!file) { showToast(t("post_no_file")); return; }
+    if (!tiktokProfile) { showToast(t("post_need_account")); return; }
     try {
       setUploading(true);
       const res = await api.uploadTikTok({ file });
@@ -118,17 +128,49 @@ export default function Post() {
                   TikTok
                 </div>
               </div>
-              <div className="helper">{t("post_click_platform")}</div>
             </div>
 
-            <div className="notice notice-info">
-              {t("post_tiktok_notice")}
-            </div>
+            {/* Статус подключённого аккаунта */}
+            {profileLoading ? (
+              <div className="notice notice-info">{t("loading")}</div>
+            ) : tiktokProfile ? (
+              <div className="account-status-row">
+                {tiktokProfile.avatar_url ? (
+                  <img
+                    src={tiktokProfile.avatar_url}
+                    alt="avatar"
+                    className="account-avatar-sm"
+                  />
+                ) : (
+                  <div className="account-avatar-sm account-avatar-placeholder">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.72a4.85 4.85 0 0 1-1.02-.03z"/>
+                    </svg>
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{tiktokProfile.display_name || tiktokProfile.handle}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("acc_connected")}</div>
+                </div>
+                <span className="badge badge-success" style={{ marginLeft: "auto" }}>✓</span>
+              </div>
+            ) : (
+              <div className="notice notice-warn">
+                {t("post_need_account")}
+                <button
+                  className="btn btn-sm btn-dark"
+                  style={{ marginTop: 8, display: "block" }}
+                  onClick={() => navigate("/accounts")}
+                >
+                  {t("acc_connect")}
+                </button>
+              </div>
+            )}
 
             <div className="inline-actions">
               <button
                 className="btn btn-dark"
-                disabled={uploading || !file}
+                disabled={uploading || !file || !tiktokProfile}
                 onClick={handlePublishNow}
               >
                 {uploading ? t("post_uploading") : t("post_publish")}
