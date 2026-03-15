@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/ReelFlow/',
+  base: '/reelflow/',
   server: {
     port: 5173,
     // Proxy API calls to the Cloudflare Worker dev server
