@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import SectionCard from "../components/SectionCard";
 import { useI18n } from "../hooks/useI18n";
@@ -8,23 +8,19 @@ export default function Dashboard() {
   const { t } = useI18n();
   const [profiles, setProfiles] = useState({});
   const [stats, setStats] = useState(null);
-  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     async function load() {
       try {
-        const [meRes, statsRes, projectsRes] = await Promise.all([
+        const [meRes, statsRes] = await Promise.all([
           api.getMe(),
           api.getStats(),
-          api.getProjects(),
         ]);
         setProfiles(meRes?.profiles || {});
         setStats(statsRes || null);
-        setProjects(projectsRes?.projects || []);
       } catch {
         setProfiles({});
         setStats(null);
-        setProjects([]);
       }
     }
     load();
@@ -41,16 +37,7 @@ export default function Dashboard() {
           </span>
 
           <h1>{t("dash_subtitle")}</h1>
-
           <p>{t("dash_connect_hint")}</p>
-
-          <div className="mini-users">
-            <div className="mini-avatars">
-              <span /><span /><span /><span /><span />
-            </div>
-            <strong>{stats?.published ?? 0}</strong>
-            <span className="muted">{t("dash_published").toLowerCase()}</span>
-          </div>
 
           <div className="inline-actions">
             <Link to="/post" className="btn btn-dark">{t("nav_post")}</Link>
@@ -70,7 +57,7 @@ export default function Dashboard() {
 
       <div style={{ height: 16 }} />
 
-      <section className="grid-4">
+      <section className="grid-3">
         <div className="stat-card">
           <div className="stat-label">{t("acc_connected")}</div>
           <div className="stat-value">{connectedCount}</div>
@@ -81,10 +68,6 @@ export default function Dashboard() {
           <div className="stat-value">{stats?.uploaded ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">{t("dash_published")}</div>
-          <div className="stat-value">{stats?.published ?? 0}</div>
-        </div>
-        <div className="stat-card">
           <div className="stat-label">{t("dash_errors")}</div>
           <div className="stat-value">{stats?.errors ?? 0}</div>
         </div>
@@ -92,7 +75,7 @@ export default function Dashboard() {
 
       <div style={{ height: 16 }} />
 
-      <section className="grid-3">
+      <section className="grid-2">
         <SectionCard title="TikTok">
           {connectedCount === 0 ? (
             <div className="empty-state" style={{ padding: "20px 0" }}>
@@ -104,22 +87,22 @@ export default function Dashboard() {
           ) : (
             <div className="kv">
               {profiles.tiktok && (
-                <div>
-                  <strong>TikTok</strong>
-                  <span className="badge badge-success">{t("acc_connected")}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {profiles.tiktok.avatar_url && (
+                    <img src={profiles.tiktok.avatar_url} alt="avatar" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
+                  )}
+                  <div>
+                    <strong>{profiles.tiktok.display_name || profiles.tiktok.handle}</strong>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("acc_connected")}</div>
+                  </div>
+                  <span className="badge badge-success" style={{ marginLeft: "auto" }}>✓</span>
                 </div>
               )}
             </div>
           )}
         </SectionCard>
 
-        <SectionCard title={t("dash_recent_videos")}>
-          <div className="empty-state" style={{ padding: "20px 0" }}>
-            <Link to="/history" className="btn btn-sm btn-ghost">{t("nav_history")}</Link>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Quick actions">
+        <SectionCard title={t("dash_quick_actions")}>
           <div className="column">
             <Link to="/post" className="btn btn-dark">
               {t("nav_post")}

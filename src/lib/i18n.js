@@ -54,6 +54,7 @@ const translations = {
     dash_recent_videos: "Последние видео",
     dash_no_videos: "Нет загруженных видео",
     dash_connect_hint: "Подключите TikTok в разделе Аккаунты",
+    dash_quick_actions: "Быстрые действия",
 
     // Post
     post_title: "Опубликовать видео",
@@ -182,6 +183,7 @@ const translations = {
     dash_recent_videos: "Recent videos",
     dash_no_videos: "No videos uploaded",
     dash_connect_hint: "Connect TikTok in Accounts section",
+    dash_quick_actions: "Quick actions",
 
     // Post
     post_title: "Publish video",

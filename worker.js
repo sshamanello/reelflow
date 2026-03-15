@@ -354,6 +354,13 @@ async function handleExchange(req, env, cors) {
 
       sess.tiktok = platformData;
 
+      // Сохраняем токен по userId чтобы он не терялся при логауте/логине
+      if (sess.userId) {
+        await env.SESSIONS.put(`tiktok_token:${sess.userId}`, JSON.stringify(platformData), {
+          expirationTtl: 60 * 60 * 24 * 60,
+        });
+      }
+
       // 3) профиль
       profile = await tiktokMe(access_token);
 
@@ -493,9 +500,12 @@ async function handleLogout(req, env, cors) {
       return json({ error: "invalid_platform" }, cors, 400);
     }
 
-    // Удаляем токен платформы из сессии
+    // Удаляем токен платформы из сессии и из постоянного хранилища
     if (platform === 'tiktok') {
       delete sess.tiktok;
+      if (sess.userId) {
+        await env.SESSIONS.delete(`tiktok_token:${sess.userId}`);
+      }
     } else if (platform === 'youtube') {
       delete sess.youtube;
     }
@@ -978,6 +988,13 @@ async function handleLogin(req, env, cors) {
 
     const sid = await randomId();
     const sess = { userId: user.id, email: user.email, name: user.name };
+
+    // Восстанавливаем TikTok токен если он был сохранён ранее
+    const savedTiktok = await env.SESSIONS.get(`tiktok_token:${user.id}`);
+    if (savedTiktok) {
+      try { sess.tiktok = JSON.parse(savedTiktok); } catch {}
+    }
+
     await putSession(env, sid, sess);
 
     return new Response(JSON.stringify({ ok: true, user: { id: user.id, email: user.email, name: user.name }, sid }), {
