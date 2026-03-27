@@ -39,6 +39,7 @@ export default function Post() {
   const [disableStitch, setDisableStitch]       = useState(false);
   const [brandContentToggle, setBrandContentToggle] = useState(false);
   const [brandOrganicToggle, setBrandOrganicToggle] = useState(false);
+  const [musicConsent, setMusicConsent] = useState(false);
 
   // post processing
   const [processing, setProcessing]   = useState(false);
@@ -75,10 +76,24 @@ export default function Post() {
       .finally(() => setCreatorInfoLoading(false));
   }, [tiktokProfile]);
 
-  // When brandContentToggle is on, branded content requires PUBLIC
+  // When brandContentToggle is on, branded content requires PUBLIC (not SELF_ONLY)
   useEffect(() => {
-    if (brandContentToggle) setPrivacyLevel("PUBLIC_TO_EVERYONE");
+    if (brandContentToggle && privacyLevel === "SELF_ONLY") {
+      setPrivacyLevel("PUBLIC_TO_EVERYONE");
+    }
   }, [brandContentToggle]);
+
+  // When privacy is SELF_ONLY, branded content must be disabled
+  useEffect(() => {
+    if (privacyLevel === "SELF_ONLY") {
+      setBrandContentToggle(false);
+    }
+  }, [privacyLevel]);
+
+  // Filter out SELF_ONLY when branded content is enabled
+  const privacyOptions = brandContentToggle
+    ? availablePrivacy.filter(o => o.value !== "SELF_ONLY")
+    : availablePrivacy;
 
   // Poll publish status
   useEffect(() => {
@@ -200,7 +215,7 @@ export default function Post() {
     }
   }
 
-  const canPublish = !uploading && !!file && !!tiktokProfile && !!privacyLevel;
+  const canPublish = !uploading && !!file && !!tiktokProfile && !!privacyLevel && musicConsent;
 
   return (
     <>
@@ -361,17 +376,23 @@ export default function Post() {
                 {creatorInfoLoading ? (
                   <div style={{ fontSize: 13, color: "var(--muted)" }}>{t("loading")}</div>
                 ) : (
-                  <select
-                    className="select"
-                    value={privacyLevel}
-                    onChange={e => setPrivacyLevel(e.target.value)}
-                    disabled={brandContentToggle}
-                  >
-                    <option value="" disabled>{t("post_privacy_select")}</option>
-                    {availablePrivacy.map(opt => (
-                      <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      className="select"
+                      value={privacyLevel}
+                      onChange={e => setPrivacyLevel(e.target.value)}
+                    >
+                      <option value="" disabled>{t("post_privacy_select")}</option>
+                      {privacyOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                      ))}
+                    </select>
+                    {brandContentToggle && privacyLevel === "SELF_ONLY" && (
+                      <div className="notice notice-warn" style={{ fontSize: 12, marginTop: 6 }}>
+                        {t("post_branded_content_private_warning")}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -436,11 +457,29 @@ export default function Post() {
               </div>
             )}
 
-            {/* Inbox notice (not processing) */}
+            {/* Processing time notice */}
             {!processing && (
               <div className="notice notice-info" style={{ fontSize: 12 }}>
-                {t("post_inbox_notice")}
+                {t("post_processing_notice")}
               </div>
+            )}
+
+            {/* Music usage consent - required by TikTok */}
+            {tiktokProfile && !processing && (
+              <label className="post-toggle" style={{ marginTop: 8 }}>
+                <span className="post-toggle-text">
+                  <span>{t("post_music_consent")}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={musicConsent}
+                  onChange={e => setMusicConsent(e.target.checked)}
+                  style={{ display: "none" }}
+                />
+                <span className={`post-toggle-track${musicConsent ? " on" : ""}`}>
+                  <span className="post-toggle-knob" />
+                </span>
+              </label>
             )}
 
             <div className="inline-actions">
