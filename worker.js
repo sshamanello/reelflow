@@ -596,9 +596,10 @@ async function handleUploadInit(req, env, cors) {
 
   if (!file_size || file_size <= 0) return json({ error: "invalid_file_size" }, cors, 400);
 
-  const FIVE_MB = 5 * 1024 * 1024;
-  const chunk_size = file_size < FIVE_MB ? file_size : FIVE_MB;
-  const total_chunk_count = Math.ceil(file_size / chunk_size);
+  // TikTok requires chunk_size * total_chunk_count == video_size exactly.
+  // Safest: single chunk (total_chunk_count=1, chunk_size=video_size).
+  const chunk_size = file_size;
+  const total_chunk_count = 1;
 
   const sourceInfo = {
     source: "FILE_UPLOAD",
