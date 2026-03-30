@@ -199,29 +199,27 @@ export const api = {
       }),
     });
 
-    const { publish_id, chunk_size, total_chunks } = initData;
+    const { publish_id, upload_url, mime } = initData;
 
-    // Step 2: Upload chunks — each chunk is a separate Worker request (avoids 30s timeout)
+    // Step 2: Upload directly from browser to TikTok's upload URL (bypasses Worker proxy)
     const buf = await file.arrayBuffer();
-    for (let i = 0; i < total_chunks; i++) {
-      const start = i * chunk_size;
-      const end = Math.min(start + chunk_size, file.size);
-      const chunk = buf.slice(start, end);
-
-      await request("/api/tiktok/upload-chunk", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "x-publish-id": publish_id,
-          "x-chunk-index": String(i),
-          "x-chunk-start": String(start),
-          "x-total-size": String(file.size),
-        },
-        body: chunk,
-      });
-
-      onProgress?.((i + 1) / total_chunks);
+    const putResp = await fetch(upload_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": mime || file.type || "video/mp4",
+        "Content-Length": String(file.size),
+        "Content-Range": `bytes 0-${file.size - 1}/${file.size}`,
+      },
+      body: buf,
+    });
+    if (!putResp.ok && putResp.status !== 206 && putResp.status !== 201) {
+      const errText = await putResp.text().catch(() => "");
+      const err = new Error("chunk_upload_failed");
+      err.status = putResp.status;
+      err.payload = { error: "chunk_upload_failed", body: errText };
+      throw err;
     }
+    onProgress?.(1);
 
     // Step 3: Complete — worker calls inbox publish (if needed) and saves video record
     return request("/api/tiktok/upload-complete", {

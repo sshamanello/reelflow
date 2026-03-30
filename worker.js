@@ -706,7 +706,8 @@ async function handleUploadInit(req, env, cors) {
     { expirationTtl: 7200 }
   );
 
-  return json({ publish_id, chunk_size, total_chunks: total_chunk_count, use_inbox }, cors, 200);
+  // Return upload_url so the browser can PUT directly to TikTok (avoids Worker proxy timeout)
+  return json({ publish_id, chunk_size, total_chunks: total_chunk_count, use_inbox, upload_url, mime }, cors, 200);
 }
 
 async function handleUploadChunk(req, env, cors) {
