@@ -43,7 +43,7 @@ export async function buildTikTokOAuthUrl() {
 
   const params = new URLSearchParams({
     client_key: TIKTOK_CLIENT_KEY,
-    scope: "user.info.basic,video.upload",
+    scope: "user.info.basic,video.upload,video.publish",
     response_type: "code",
     redirect_uri: redirectUri,
     state,

@@ -577,6 +577,178 @@ async function handlePublishStatus(req, env, cors) {
   return json(data?.data || data, cors, resp.status);
 }
 
+/* -------------------- upload v2: init / chunk / complete -------------------- */
+
+async function handleUploadInit(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.tiktok?.access_token;
+  if (!access_token) return json({ error: "no_tiktok_token" }, cors, 401);
+
+  const body = await req.json();
+  const {
+    title, privacy_level, disable_comment, disable_duet, disable_stitch,
+    brand_content_toggle, brand_organic_toggle, cover_timestamp_ms,
+    file_size, file_mime,
+  } = body;
+
+  if (!file_size || file_size <= 0) return json({ error: "invalid_file_size" }, cors, 400);
+
+  const FIVE_MB = 5 * 1024 * 1024;
+  const chunk_size = file_size < FIVE_MB ? file_size : FIVE_MB;
+  const total_chunk_count = Math.ceil(file_size / chunk_size);
+
+  const sourceInfo = {
+    source: "FILE_UPLOAD",
+    video_size: file_size,
+    chunk_size,
+    total_chunk_count,
+  };
+
+  const postInfo = {
+    title: (title || "My video").slice(0, 150),
+    privacy_level: privacy_level || "SELF_ONLY",
+    disable_duet: !!disable_duet,
+    disable_comment: !!disable_comment,
+    disable_stitch: !!disable_stitch,
+    video_cover_timestamp_ms: cover_timestamp_ms ?? 0,
+    brand_content_toggle: !!brand_content_toggle,
+    brand_organic_toggle: !!brand_organic_toggle,
+  };
+
+  // Try Direct Post first
+  let upload_url, publish_id, use_inbox = false;
+
+  const directResp = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json; charset=UTF-8", Accept: "application/json" },
+    body: JSON.stringify({ post_info: postInfo, source_info: sourceInfo }),
+  });
+  const directText = await directResp.text();
+  console.log("Direct Post INIT:", directResp.status, directText);
+  let directJson = {};
+  try { directJson = JSON.parse(directText); } catch {}
+  const directOk = directResp.ok && (!directJson.error || directJson.error.code === "ok");
+
+  if (directOk) {
+    upload_url = directJson?.data?.upload_url;
+    publish_id = directJson?.data?.publish_id;
+  } else {
+    // Fallback: Inbox API
+    use_inbox = true;
+    const inboxResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json; charset=UTF-8", Accept: "application/json" },
+      body: JSON.stringify({ source_info: sourceInfo }),
+    });
+    const inboxText = await inboxResp.text();
+    console.log("Inbox INIT:", inboxResp.status, inboxText);
+    let inboxJson = {};
+    try { inboxJson = JSON.parse(inboxText); } catch {}
+    const inboxOk = inboxResp.ok && (!inboxJson.error || inboxJson.error.code === "ok");
+
+    if (!inboxOk) {
+      const tiktok_error = inboxJson?.error?.code || directJson?.error?.code || "init_failed";
+      const tiktok_message = inboxJson?.error?.message || directJson?.error?.message || "";
+      return json({ error: "init_failed", tiktok_error, tiktok_message, detail: inboxJson }, cors, 400);
+    }
+    upload_url = inboxJson?.data?.upload_url;
+    publish_id = inboxJson?.data?.publish_id;
+  }
+
+  if (!upload_url || !publish_id) return json({ error: "init_missing_fields" }, cors, 400);
+
+  // Store upload state in KV (2 hours TTL)
+  await env.SESSIONS.put(
+    `upload:${publish_id}`,
+    JSON.stringify({ upload_url, use_inbox }),
+    { expirationTtl: 7200 }
+  );
+
+  return json({ publish_id, chunk_size, total_chunks: total_chunk_count, use_inbox }, cors, 200);
+}
+
+async function handleUploadChunk(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const publishId  = req.headers.get("x-publish-id");
+  const chunkStart = Number(req.headers.get("x-chunk-start") || 0);
+  const totalSize  = Number(req.headers.get("x-total-size") || 0);
+
+  if (!publishId) return json({ error: "missing_publish_id" }, cors, 400);
+
+  const stateRaw = await env.SESSIONS.get(`upload:${publishId}`);
+  if (!stateRaw) return json({ error: "upload_session_not_found" }, cors, 404);
+  const { upload_url } = JSON.parse(stateRaw);
+
+  const chunk = await req.arrayBuffer();
+  const chunkEnd = chunkStart + chunk.byteLength - 1;
+
+  const putResp = await fetch(upload_url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": String(chunk.byteLength),
+      "Content-Range": `bytes ${chunkStart}-${chunkEnd}/${totalSize}`,
+    },
+    body: chunk,
+  });
+
+  if (!(putResp.ok || putResp.status === 206 || putResp.status === 201)) {
+    const putText = await putResp.text().catch(() => "");
+    console.log("Chunk PUT failed:", putResp.status, putText);
+    return json({ error: "chunk_upload_failed", status: putResp.status, body: putText }, cors, 502);
+  }
+
+  return json({ ok: true }, cors, 200);
+}
+
+async function handleUploadComplete(req, env, cors) {
+  const sid = getSidFromReq(req, env);
+  const sess = await getSession(env, sid);
+  if (!sess) return json({ error: "unauthorized" }, cors, 401);
+
+  const access_token = sess.tiktok?.access_token;
+  const { publish_id, video_name } = await req.json();
+
+  const stateRaw = await env.SESSIONS.get(`upload:${publish_id}`);
+  if (!stateRaw) return json({ error: "upload_session_not_found" }, cors, 404);
+  const { use_inbox } = JSON.parse(stateRaw);
+
+  // Inbox: send to drafts
+  if (use_inbox) {
+    const publishResp = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/publish/", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({ publish_id }),
+    });
+    const publishText = await publishResp.text();
+    console.log("Inbox PUBLISH:", publishResp.status, publishText);
+  }
+
+  // Persist video record per user (survives re-login)
+  const videosKey = `videos:${sess.userId}`;
+  const raw = await env.SESSIONS.get(videosKey);
+  const videos = raw ? JSON.parse(raw) : [];
+  videos.push({
+    id: Date.now(),
+    name: video_name || "Untitled",
+    publishId: publish_id,
+    status: use_inbox ? "uploaded" : "processing",
+    createdAt: new Date().toISOString(),
+  });
+  await env.SESSIONS.put(videosKey, JSON.stringify(videos), { expirationTtl: 60 * 60 * 24 * 60 });
+
+  // Clean up upload state
+  await env.SESSIONS.delete(`upload:${publish_id}`);
+
+  return json({ status: use_inbox ? "uploaded_to_inbox" : "processing", publish_id }, cors, 200);
+}
+
 /* -------------------- upload (Direct Post API) -------------------- */
 
 async function handleUpload(req, env, cors) {
@@ -1150,6 +1322,15 @@ export default {
       }
       if (url.pathname === "/api/tiktok/me" && req.method === "GET") {
         return await handleMe(req, env, cors);
+      }
+      if (url.pathname === "/api/tiktok/upload-init" && req.method === "POST") {
+        return await handleUploadInit(req, env, cors);
+      }
+      if (url.pathname === "/api/tiktok/upload-chunk" && req.method === "POST") {
+        return await handleUploadChunk(req, env, cors);
+      }
+      if (url.pathname === "/api/tiktok/upload-complete" && req.method === "POST") {
+        return await handleUploadComplete(req, env, cors);
       }
       if (url.pathname === "/api/tiktok/upload" && req.method === "POST") {
         return await handleUpload(req, env, cors);

@@ -179,21 +179,54 @@ export const api = {
     return request(`/api/tiktok/status?publish_id=${encodeURIComponent(publish_id)}`, { method: "GET" });
   },
 
-  async uploadTikTok({ file, title, privacyLevel, disableComment, disableDuet, disableStitch, brandContentToggle, brandOrganicToggle, coverTimestampMs }) {
+  async uploadTikTok({ file, title, privacyLevel, disableComment, disableDuet, disableStitch, brandContentToggle, brandOrganicToggle, coverTimestampMs, onProgress }) {
     if (MOCK_API) return mockRequest("POST", "/api/tiktok/upload", { fileName: file?.name });
-    const form = new FormData();
-    form.append("file", file);
-    if (title) form.append("title", title);
-    if (privacyLevel) form.append("privacy_level", privacyLevel);
-    form.append("disable_comment", String(!!disableComment));
-    form.append("disable_duet", String(!!disableDuet));
-    form.append("disable_stitch", String(!!disableStitch));
-    form.append("brand_content_toggle", String(!!brandContentToggle));
-    form.append("brand_organic_toggle", String(!!brandOrganicToggle));
-    if (coverTimestampMs != null) form.append("cover_timestamp_ms", String(coverTimestampMs));
-    return request("/api/tiktok/upload", {
+
+    // Step 1: Init — get upload_url + publish_id from worker (no file sent here)
+    const initData = await request("/api/tiktok/upload-init", {
       method: "POST",
-      body: form,
+      body: JSON.stringify({
+        title: title || file.name,
+        privacy_level: privacyLevel,
+        disable_comment: !!disableComment,
+        disable_duet: !!disableDuet,
+        disable_stitch: !!disableStitch,
+        brand_content_toggle: !!brandContentToggle,
+        brand_organic_toggle: !!brandOrganicToggle,
+        cover_timestamp_ms: coverTimestampMs ?? 0,
+        file_size: file.size,
+        file_mime: file.type || "video/mp4",
+      }),
+    });
+
+    const { publish_id, chunk_size, total_chunks } = initData;
+
+    // Step 2: Upload chunks — each chunk is a separate Worker request (avoids 30s timeout)
+    const buf = await file.arrayBuffer();
+    for (let i = 0; i < total_chunks; i++) {
+      const start = i * chunk_size;
+      const end = Math.min(start + chunk_size, file.size);
+      const chunk = buf.slice(start, end);
+
+      await request("/api/tiktok/upload-chunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "x-publish-id": publish_id,
+          "x-chunk-index": String(i),
+          "x-chunk-start": String(start),
+          "x-total-size": String(file.size),
+        },
+        body: chunk,
+      });
+
+      onProgress?.((i + 1) / total_chunks);
+    }
+
+    // Step 3: Complete — worker calls inbox publish (if needed) and saves video record
+    return request("/api/tiktok/upload-complete", {
+      method: "POST",
+      body: JSON.stringify({ publish_id, video_name: title || file.name }),
     });
   },
 };

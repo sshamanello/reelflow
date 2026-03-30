@@ -22,8 +22,9 @@ export default function Post() {
   const [file, setFile]               = useState(null);
   const [previewUrl, setPreviewUrl]   = useState(null);
   const [thumbnail, setThumbnail]     = useState(null); // { url, blob, timestampMs }
-  const [uploading, setUploading]     = useState(false);
-  const [durationError, setDurationError] = useState(null);
+  const [uploading, setUploading]       = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0); // 0–1
+  const [durationError, setDurationError]   = useState(null);
 
   // tiktok account
   const [tiktokProfile, setTiktokProfile]   = useState(null);
@@ -222,6 +223,7 @@ export default function Post() {
 
     try {
       setUploading(true);
+      setUploadProgress(0);
       const res = await api.uploadTikTok({
         file,
         title: title || file.name,
@@ -232,14 +234,10 @@ export default function Post() {
         brandContentToggle,
         brandOrganicToggle,
         coverTimestampMs: thumbnail?.timestampMs ?? 0,
+        onProgress: p => setUploadProgress(p),
       });
 
-      await api.saveVideo({
-        videoName: title || file.name,
-        publishId: res.publish_id,
-        status: res.status === "published" ? "published" : "uploaded",
-      });
-
+      // Video record is saved by upload-complete on the worker side
       if (res.publish_id) {
         setPublishId(res.publish_id);
         setProcessing(true);
@@ -251,9 +249,11 @@ export default function Post() {
         setDescription("");
       }
     } catch (e) {
-      showToast(e?.payload?.message || e?.payload?.error || t("post_error"));
+      const msg = e?.payload?.tiktok_message || e?.payload?.tiktok_error || e?.payload?.error || t("post_error");
+      showToast(msg);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -561,6 +561,15 @@ export default function Post() {
                   <span className="post-toggle-knob" />
                 </span>
               </label>
+            )}
+
+            {uploading && uploadProgress > 0 && (
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                {t("post_uploading")} {Math.round(uploadProgress * 100)}%
+                <div style={{ marginTop: 4, height: 4, background: "var(--border)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", width: `${Math.round(uploadProgress * 100)}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s" }} />
+                </div>
+              </div>
             )}
 
             <div className="inline-actions">
