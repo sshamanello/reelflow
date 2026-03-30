@@ -17,33 +17,40 @@ export default function Post() {
   const navigate = useNavigate();
 
   // file
-  const [title, setTitle]           = useState("");
+  const [title, setTitle]             = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile]             = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [thumbnail, setThumbnail]   = useState(null); // { url, blob, timestampMs }
-  const [uploading, setUploading]   = useState(false);
+  const [file, setFile]               = useState(null);
+  const [previewUrl, setPreviewUrl]   = useState(null);
+  const [thumbnail, setThumbnail]     = useState(null); // { url, blob, timestampMs }
+  const [uploading, setUploading]     = useState(false);
+  const [durationError, setDurationError] = useState(null);
 
   // tiktok account
   const [tiktokProfile, setTiktokProfile]   = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
   // creator info (privacy options, caps)
-  const [creatorInfo, setCreatorInfo]         = useState(null);
+  const [creatorInfo, setCreatorInfo]               = useState(null);
   const [creatorInfoLoading, setCreatorInfoLoading] = useState(false);
 
   // publish settings
-  const [privacyLevel, setPrivacyLevel]         = useState("");
-  const [disableComment, setDisableComment]     = useState(false);
-  const [disableDuet, setDisableDuet]           = useState(false);
-  const [disableStitch, setDisableStitch]       = useState(false);
-  const [brandContentToggle, setBrandContentToggle] = useState(false);
+  // Interactions default OFF per TikTok UX Guidelines Point 2
+  const [privacyLevel, setPrivacyLevel]     = useState("");
+  const [disableComment, setDisableComment] = useState(true);
+  const [disableDuet, setDisableDuet]       = useState(true);
+  const [disableStitch, setDisableStitch]   = useState(true);
+
+  // commercial content disclosure (Point 3)
+  const [disclosureToggle, setDisclosureToggle]     = useState(false);
   const [brandOrganicToggle, setBrandOrganicToggle] = useState(false);
+  const [brandContentToggle, setBrandContentToggle] = useState(false);
+
+  // consent
   const [musicConsent, setMusicConsent] = useState(false);
 
   // post processing
-  const [processing, setProcessing]   = useState(false);
-  const [publishId, setPublishId]     = useState(null);
+  const [processing, setProcessing]     = useState(false);
+  const [publishId, setPublishId]       = useState(null);
   const [publishStatus, setPublishStatus] = useState(null);
 
   const fileInputRef  = useRef(null);
@@ -67,7 +74,7 @@ export default function Post() {
     api.getCreatorInfo()
       .then(info => {
         setCreatorInfo(info);
-        // pre-fill defaults from creator caps
+        // Force-disable interactions that the creator's account doesn't support
         if (info?.comment_disabled) setDisableComment(true);
         if (info?.duet_disabled)    setDisableDuet(true);
         if (info?.stitch_disabled)  setDisableStitch(true);
@@ -76,24 +83,20 @@ export default function Post() {
       .finally(() => setCreatorInfoLoading(false));
   }, [tiktokProfile]);
 
-  // When brandContentToggle is on, branded content requires PUBLIC (not SELF_ONLY)
+  // Branded content is incompatible with SELF_ONLY — auto-switch to PUBLIC (Point 3b)
   useEffect(() => {
     if (brandContentToggle && privacyLevel === "SELF_ONLY") {
       setPrivacyLevel("PUBLIC_TO_EVERYONE");
     }
   }, [brandContentToggle]);
 
-  // When privacy is SELF_ONLY, branded content must be disabled
+  // When disclosure toggle turns off, reset sub-options
   useEffect(() => {
-    if (privacyLevel === "SELF_ONLY") {
+    if (!disclosureToggle) {
+      setBrandOrganicToggle(false);
       setBrandContentToggle(false);
     }
-  }, [privacyLevel]);
-
-  // Filter out SELF_ONLY when branded content is enabled
-  const privacyOptions = brandContentToggle
-    ? availablePrivacy.filter(o => o.value !== "SELF_ONLY")
-    : availablePrivacy;
+  }, [disclosureToggle]);
 
   // Poll publish status
   useEffect(() => {
@@ -115,7 +118,7 @@ export default function Post() {
           if (status === "PUBLISHED") {
             showToast(t("post_processing_done"));
           } else {
-            showToast(t("post_success")); // inbox/drafts
+            showToast(t("post_success"));
           }
         }
       } catch {
@@ -130,12 +133,24 @@ export default function Post() {
 
   function handleFileChange(f) {
     setFile(f);
+    setDurationError(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(f ? URL.createObjectURL(f) : null);
     setThumbnail(null);
     setProcessing(false);
     setPublishId(null);
     setPublishStatus(null);
+  }
+
+  // Validate video duration against creator's max (Point 1)
+  function handleVideoMetadata() {
+    const video = videoRef.current;
+    if (!video || !creatorInfo?.max_video_post_duration_sec) return;
+    if (video.duration > creatorInfo.max_video_post_duration_sec) {
+      setDurationError(
+        t("post_video_too_long").replace("{max}", creatorInfo.max_video_post_duration_sec)
+      );
+    }
   }
 
   function captureFrame() {
@@ -168,15 +183,42 @@ export default function Post() {
     };
   }, []);
 
-  // Available privacy options: from creator info or all
+  // Available privacy options from creator info
   const availablePrivacy = creatorInfo?.privacy_level_options
     ? PRIVACY_OPTIONS.filter(o => creatorInfo.privacy_level_options.includes(o.value))
     : PRIVACY_OPTIONS;
 
+  // SELF_ONLY is disabled (not removed) when branded content is active (Point 3b — Option A)
+  const privacyOptions = availablePrivacy.map(o => ({
+    ...o,
+    disabled: brandContentToggle && o.value === "SELF_ONLY",
+  }));
+
+  // Disclosure validation: if parent toggle is on, at least one sub-option must be selected
+  const disclosureValid = !disclosureToggle || brandOrganicToggle || brandContentToggle;
+
+  // Content label shown to user (per guideline Point 3)
+  const contentLabel = disclosureToggle && (brandOrganicToggle || brandContentToggle)
+    ? (brandContentToggle ? t("post_paid_label") : t("post_promotional_label"))
+    : null;
+
+  // Creator cannot post (Point 1)
+  const cannotPost = creatorInfo && creatorInfo.can_post_tiktok_video === false;
+
+  const canPublish =
+    !uploading &&
+    !durationError &&
+    !cannotPost &&
+    !!file &&
+    !!tiktokProfile &&
+    !!privacyLevel &&
+    musicConsent &&
+    disclosureValid;
+
   async function handlePublishNow() {
-    if (!file)           { showToast(t("post_no_file"));        return; }
-    if (!tiktokProfile)  { showToast(t("post_need_account"));   return; }
-    if (!privacyLevel)   { showToast(t("post_privacy_required")); return; }
+    if (!file)          { showToast(t("post_no_file"));          return; }
+    if (!tiktokProfile) { showToast(t("post_need_account"));     return; }
+    if (!privacyLevel)  { showToast(t("post_privacy_required")); return; }
 
     try {
       setUploading(true);
@@ -215,8 +257,6 @@ export default function Post() {
     }
   }
 
-  const canPublish = !uploading && !!file && !!tiktokProfile && !!privacyLevel && musicConsent;
-
   return (
     <>
       <h1 className="page-title">{t("post_title")}</h1>
@@ -229,8 +269,19 @@ export default function Post() {
 
             {previewUrl ? (
               <div className="video-preview-wrap">
-                <video ref={videoRef} src={previewUrl} controls className="video-preview" />
+                <video
+                  ref={videoRef}
+                  src={previewUrl}
+                  controls
+                  className="video-preview"
+                  onLoadedMetadata={handleVideoMetadata}
+                />
                 <canvas ref={canvasRef} style={{ display: "none" }} />
+                {durationError && (
+                  <div className="notice notice-warn" style={{ fontSize: 12, marginTop: 4 }}>
+                    {durationError}
+                  </div>
+                )}
                 <div className="video-preview-footer">
                   <span className="video-preview-name">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -339,7 +390,7 @@ export default function Post() {
               </div>
             </div>
 
-            {/* Account status */}
+            {/* Account status + creator nickname (Point 1) */}
             {profileLoading ? (
               <div className="notice notice-info">{t("loading")}</div>
             ) : tiktokProfile ? (
@@ -354,7 +405,9 @@ export default function Post() {
                   </div>
                 )}
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{tiktokProfile.display_name || tiktokProfile.handle}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>
+                    {creatorInfo?.nickname || tiktokProfile.display_name || tiktokProfile.handle}
+                  </div>
                   <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("acc_connected")}</div>
                 </div>
                 <span className="badge badge-success" style={{ marginLeft: "auto" }}>✓</span>
@@ -369,7 +422,14 @@ export default function Post() {
               </div>
             )}
 
-            {/* Privacy level */}
+            {/* Cannot post warning (Point 1) */}
+            {cannotPost && (
+              <div className="notice notice-warn" style={{ fontSize: 13 }}>
+                {t("post_cannot_post")}
+              </div>
+            )}
+
+            {/* Privacy level (Point 2 — no default value) */}
             {tiktokProfile && (
               <div>
                 <label className="label">{t("post_privacy")} *</label>
@@ -384,12 +444,14 @@ export default function Post() {
                     >
                       <option value="" disabled>{t("post_privacy_select")}</option>
                       {privacyOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                          {t(opt.labelKey)}
+                        </option>
                       ))}
                     </select>
-                    {brandContentToggle && privacyLevel === "SELF_ONLY" && (
-                      <div className="notice notice-warn" style={{ fontSize: 12, marginTop: 6 }}>
-                        {t("post_branded_content_private_warning")}
+                    {brandContentToggle && (
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                        {t("post_branded_private_tooltip")}
                       </div>
                     )}
                   </>
@@ -397,7 +459,7 @@ export default function Post() {
               </div>
             )}
 
-            {/* Interactions */}
+            {/* Interactions (Point 2 — all OFF by default) */}
             {tiktokProfile && (
               <div>
                 <label className="label">{t("post_interactions")}</label>
@@ -424,28 +486,43 @@ export default function Post() {
               </div>
             )}
 
-            {/* Commercial content disclosure */}
+            {/* Commercial Content Disclosure (Point 3) */}
             {tiktokProfile && (
               <div>
-                <label className="label">{t("post_commercial")}</label>
-                <div className="column" style={{ gap: 8 }}>
-                  <PostToggle
-                    label={t("post_your_brand")}
-                    hint={t("post_commercial_hint")}
-                    checked={brandOrganicToggle}
-                    onChange={v => setBrandOrganicToggle(v)}
-                  />
-                  <PostToggle
-                    label={t("post_branded_content")}
-                    checked={brandContentToggle}
-                    onChange={v => setBrandContentToggle(v)}
-                  />
-                  {brandContentToggle && (
-                    <div className="notice notice-warn" style={{ fontSize: 12 }}>
-                      {t("post_branded_content_note")}
-                    </div>
-                  )}
-                </div>
+                <label className="label">{t("post_disclosure")}</label>
+                <PostToggle
+                  label={t("post_disclosure_toggle")}
+                  hint={t("post_disclosure_hint")}
+                  checked={disclosureToggle}
+                  onChange={setDisclosureToggle}
+                />
+                {disclosureToggle && (
+                  <div
+                    className="column"
+                    style={{ gap: 8, marginTop: 8, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}
+                  >
+                    <PostToggle
+                      label={t("post_your_brand")}
+                      checked={brandOrganicToggle}
+                      onChange={setBrandOrganicToggle}
+                    />
+                    <PostToggle
+                      label={t("post_branded_content")}
+                      checked={brandContentToggle}
+                      onChange={setBrandContentToggle}
+                    />
+                    {!brandOrganicToggle && !brandContentToggle && (
+                      <div className="notice notice-warn" style={{ fontSize: 12 }}>
+                        {t("post_disclosure_required")}
+                      </div>
+                    )}
+                    {contentLabel && (
+                      <div className="notice notice-info" style={{ fontSize: 12 }}>
+                        {contentLabel}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -457,18 +534,22 @@ export default function Post() {
               </div>
             )}
 
-            {/* Processing time notice */}
+            {/* Processing time notice (Point 5) */}
             {!processing && (
               <div className="notice notice-info" style={{ fontSize: 12 }}>
                 {t("post_processing_notice")}
               </div>
             )}
 
-            {/* Music usage consent - required by TikTok */}
+            {/* Music / Branded content consent — dynamic text (Points 3–4) */}
             {tiktokProfile && !processing && (
               <label className="post-toggle" style={{ marginTop: 8 }}>
                 <span className="post-toggle-text">
-                  <span>{t("post_music_consent")}</span>
+                  <span style={{ fontSize: 12, lineHeight: 1.4 }}>
+                    {brandContentToggle
+                      ? t("post_branded_consent_text")
+                      : t("post_music_consent_text")}
+                  </span>
                 </span>
                 <input
                   type="checkbox"
@@ -486,6 +567,7 @@ export default function Post() {
               <button
                 className="btn btn-dark"
                 disabled={!canPublish}
+                title={disclosureToggle && !disclosureValid ? t("post_disclosure_tooltip") : undefined}
                 onClick={handlePublishNow}
               >
                 {uploading ? t("post_uploading") : t("post_publish")}

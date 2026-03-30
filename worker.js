@@ -917,7 +917,7 @@ async function handleGetVideos(req, env, cors) {
   const sess = await getSession(env, sid);
   if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
-  const videosKey = `videos:${sid}`;
+  const videosKey = `videos:${sess.userId}`;
   const raw = await env.SESSIONS.get(videosKey);
   const videos = raw ? JSON.parse(raw) : [];
 
@@ -932,7 +932,7 @@ async function handleSaveVideo(req, env, cors) {
   const body = await req.json();
   const { projectId, videoName, publishId, status } = body;
 
-  const videosKey = `videos:${sid}`;
+  const videosKey = `videos:${sess.userId}`;
   const raw = await env.SESSIONS.get(videosKey);
   const videos = raw ? JSON.parse(raw) : [];
 
@@ -973,7 +973,7 @@ async function handleGetStats(req, env, cors) {
   const sess = await getSession(env, sid);
   if (!sid || !sess) return json({ error: "unauthorized" }, cors, 401);
 
-  const videosKey = `videos:${sid}`;
+  const videosKey = `videos:${sess.userId}`;
   const raw = await env.SESSIONS.get(videosKey);
   const videos = raw ? JSON.parse(raw) : [];
 
