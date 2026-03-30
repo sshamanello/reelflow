@@ -46,7 +46,7 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-header">
-        <Link to="/" className="auth-brand">ReelFlow</Link>
+        <Link to="/" className="auth-brand">ReelFlow Studio</Link>
         <button className="lang-toggle" onClick={() => setLang(lang === "ru" ? "en" : "ru")}>
           {lang === "ru" ? "EN" : "RU"}
         </button>

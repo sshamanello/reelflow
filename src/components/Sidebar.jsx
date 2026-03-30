@@ -73,7 +73,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-logo">ReelFlow</div>
+        <div className="brand-logo">ReelFlow Studio</div>
         {user && (
           <>
             <div className="brand-caption">{t("signed_in_as")}</div>
@@ -117,9 +117,9 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-legal">
-        <a href="/terms" target="_blank">Terms</a>
+        <a href="https://www.sshamanello.ru/terms" target="_blank" rel="noopener noreferrer">Terms</a>
         <span>·</span>
-        <a href="/privacy" target="_blank">Privacy</a>
+        <a href="https://www.sshamanello.ru/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
       </div>
     </aside>
   );

@@ -59,7 +59,7 @@ export default function Landing() {
       {/* Header */}
       <header className="landing-header">
         <div className="landing-brand">
-          <div className="landing-logo">ReelFlow</div>
+          <div className="landing-logo">ReelFlow Studio</div>
         </div>
         <nav className="landing-nav">
           <button
@@ -123,9 +123,9 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span>© 2025 ReelFlow</span>
-        <a href="#privacy">Privacy Policy</a>
-        <a href="#terms">Terms of Service</a>
+        <span>© 2025 ReelFlow Studio</span>
+        <a href="https://www.sshamanello.ru/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+        <a href="https://www.sshamanello.ru/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>
       </footer>
     </div>
   );
