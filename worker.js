@@ -153,6 +153,26 @@ async function tiktokTokenByCode(env, { code, redirect_uri, code_verifier }) {
   return json.data || json;
 }
 
+// Helper: get a valid (auto-refreshed) TikTok access token from session
+async function getValidTikTokToken(env, sid, sess) {
+  let { access_token, refresh_token, expires_at } = sess.tiktok || {};
+  if (!access_token) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (expires_at && now > (expires_at - 60) && refresh_token) {
+    try {
+      const r = await tiktokRefresh(env, refresh_token);
+      access_token  = r.access_token  || access_token;
+      refresh_token = r.refresh_token || refresh_token;
+      expires_at    = now + (r.expires_in || 3600);
+      sess.tiktok   = { access_token, refresh_token, expires_at, scope: sess.tiktok.scope };
+      await putSession(env, sid, sess);
+    } catch (e) {
+      console.error("TikTok token refresh failed:", e);
+    }
+  }
+  return access_token;
+}
+
 async function tiktokRefresh(env, refresh_token) {
   const form = new URLSearchParams();
   form.set("client_key", env.TIKTOK_CLIENT_KEY);
@@ -527,7 +547,7 @@ async function handleCreatorInfo(req, env, cors) {
   const sess = await getSession(env, sid);
   if (!sess) return json({ error: "unauthorized" }, cors, 401);
 
-  const access_token = sess.tiktok?.access_token;
+  const access_token = await getValidTikTokToken(env, sid, sess);
   if (!access_token) return json({ error: "no_tiktok_token" }, cors, 401);
 
   const resp = await fetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", {
@@ -584,7 +604,7 @@ async function handleUploadInit(req, env, cors) {
   const sess = await getSession(env, sid);
   if (!sess) return json({ error: "unauthorized" }, cors, 401);
 
-  const access_token = sess.tiktok?.access_token;
+  const access_token = await getValidTikTokToken(env, sid, sess);
   if (!access_token) return json({ error: "no_tiktok_token" }, cors, 401);
 
   const body = await req.json();
@@ -651,9 +671,24 @@ async function handleUploadInit(req, env, cors) {
     const inboxOk = inboxResp.ok && (!inboxJson.error || inboxJson.error.code === "ok");
 
     if (!inboxOk) {
-      const tiktok_error = inboxJson?.error?.code || directJson?.error?.code || "init_failed";
+      const tiktok_error   = inboxJson?.error?.code    || directJson?.error?.code    || "init_failed";
       const tiktok_message = inboxJson?.error?.message || directJson?.error?.message || "";
-      return json({ error: "init_failed", tiktok_error, tiktok_message, detail: inboxJson }, cors, 400);
+      // Friendly messages for known error codes
+      const friendly = {
+        "access_token_invalid":                          "Токен TikTok устарел. Отключите и переподключите TikTok аккаунт.",
+        "scope_not_authorized":                          "Нет разрешения на публикацию. Переподключите TikTok аккаунт.",
+        "unaudited_client_can_only_post_to_private_accounts": "Приложение ещё не прошло аудит TikTok. Выберите видимость «Только я».",
+        "spam_risk_too_many_posts":                      "Достигнут дневной лимит публикаций TikTok. Попробуйте завтра.",
+        "spam_risk_user_banned_from_posting":            "Ваш аккаунт временно ограничен TikTok.",
+        "reached_active_user_cap":                       "Достигнут дневной лимит пользователей приложения.",
+        "privacy_level_option_mismatch":                 "Выбранный уровень приватности недоступен для вашего аккаунта.",
+      };
+      return json({
+        error: "init_failed",
+        tiktok_error,
+        tiktok_message: friendly[tiktok_error] || tiktok_message,
+        detail: inboxJson,
+      }, cors, 400);
     }
     upload_url = inboxJson?.data?.upload_url;
     publish_id = inboxJson?.data?.publish_id;
@@ -662,9 +697,12 @@ async function handleUploadInit(req, env, cors) {
   if (!upload_url || !publish_id) return json({ error: "init_missing_fields" }, cors, 400);
 
   // Store upload state in KV (2 hours TTL)
+  // Normalise mime: TikTok accepts video/mp4, video/quicktime, video/webm only
+  const allowed = ["video/mp4", "video/quicktime", "video/webm"];
+  const mime = allowed.includes(file_mime) ? file_mime : "video/mp4";
   await env.SESSIONS.put(
     `upload:${publish_id}`,
-    JSON.stringify({ upload_url, use_inbox }),
+    JSON.stringify({ upload_url, use_inbox, mime }),
     { expirationTtl: 7200 }
   );
 
@@ -684,15 +722,16 @@ async function handleUploadChunk(req, env, cors) {
 
   const stateRaw = await env.SESSIONS.get(`upload:${publishId}`);
   if (!stateRaw) return json({ error: "upload_session_not_found" }, cors, 404);
-  const { upload_url } = JSON.parse(stateRaw);
+  const { upload_url, mime } = JSON.parse(stateRaw);
 
   const chunk = await req.arrayBuffer();
   const chunkEnd = chunkStart + chunk.byteLength - 1;
 
+  // TikTok requires video/mp4, video/quicktime, or video/webm — not application/octet-stream
   const putResp = await fetch(upload_url, {
     method: "PUT",
     headers: {
-      "Content-Type": "application/octet-stream",
+      "Content-Type": mime || "video/mp4",
       "Content-Length": String(chunk.byteLength),
       "Content-Range": `bytes ${chunkStart}-${chunkEnd}/${totalSize}`,
     },
