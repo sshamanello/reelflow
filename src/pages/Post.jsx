@@ -530,7 +530,7 @@ export default function Post() {
             {processing && (
               <div className="notice notice-info" style={{ fontSize: 13 }}>
                 <span style={{ marginRight: 8 }}>⏳</span>
-                {publishStatus ? `${t("post_processing")} (${publishStatus})` : t("post_processing")}
+                {t("post_processing")}
               </div>
             )}
 
